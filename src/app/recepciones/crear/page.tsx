@@ -479,7 +479,7 @@ export default function CrearORPage() {
   };
 
   const handleSubmit = () => {
-    router.push("/recepciones");
+    router.push("/recepciones?created=1");
   };
 
   return (

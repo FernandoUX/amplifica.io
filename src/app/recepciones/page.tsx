@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
   DotsVertical, Calendar, CheckCircle, X,
@@ -84,9 +85,20 @@ const stickyRight: React.CSSProperties = {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function OrdenesPage() {
+  const searchParams = useSearchParams();
+  const router       = useRouter();
+
   const [activeTab, setActiveTab] = useState<string>("Todas");
-  const [showToast, setShowToast] = useState(true);
+  const [showToast, setShowToast] = useState(false);
   const [search,    setSearch]    = useState("");
+
+  // Mostrar toast solo cuando viene de crear una OR
+  useEffect(() => {
+    if (searchParams.get("created") === "1") {
+      setShowToast(true);
+      router.replace("/recepciones"); // limpia el query param de la URL
+    }
+  }, [searchParams, router]);
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
 
