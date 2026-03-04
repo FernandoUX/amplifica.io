@@ -1,24 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import { Search, X, Plus, ChevronDown } from "lucide-react";
+import { SearchLg, X } from "@untitled-ui/icons-react";
 
-type Product = { sku: string; nombre: string; barcode: string; stock: number; qty: number };
+// ─── Types ────────────────────────────────────────────────────────────────────
+type ModalProduct = {
+  sku: string;
+  nombre: string;
+  barcode: string;
+  qty: number;
+  checked: boolean;
+};
 
-const MOCK_PRODUCTS: Product[] = [
-  { sku: "SKU-001", nombre: "Carpa Trek 2P Ultralight", barcode: "7891234560001", stock: 45, qty: 0 },
-  { sku: "SKU-002", nombre: "Mochila 40L Montaña Pro", barcode: "7891234560002", stock: 12, qty: 0 },
-  { sku: "SKU-003", nombre: "Saco de Dormir -10°C", barcode: "7891234560003", stock: 28, qty: 0 },
-  { sku: "SKU-004", nombre: "Bastones Telescópicos Carbono", barcode: "7891234560004", stock: 60, qty: 0 },
-  { sku: "SKU-005", nombre: "Linterna Frontal 500lm", barcode: "7891234560005", stock: 100, qty: 0 },
-  { sku: "SKU-006", nombre: "Botella Térmica 1L", barcode: "7891234560006", stock: 75, qty: 0 },
+export type AddProduct = {
+  sku: string;
+  nombre: string;
+  barcode: string;
+  qty: number;
+};
+
+// ─── Mock data (matching Figma design) ────────────────────────────────────────
+const MOCK_PRODUCTS: ModalProduct[] = [
+  { sku: "PAREJAS",  nombre: "100 Aventuras en Parejas", barcode: "04569432", qty: 20500, checked: true  },
+  { sku: "FAMILIA",  nombre: "100 Aventuras en Familia", barcode: "04569432", qty: 20,    checked: false },
+  { sku: "AMIGAS",   nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: true  },
+  { sku: "MAMA",     nombre: "100 Aventuras Mamá",       barcode: "04569432", qty: 500,   checked: false },
+  { sku: "PAPA",     nombre: "100 Aventuras Papá",       barcode: "04569432", qty: 500,   checked: false },
+  { sku: "ABUELO",   nombre: "100 Aventuras Abuelo",     barcode: "04569432", qty: 500,   checked: true  },
+  { sku: "ABUELA",   nombre: "100 Aventuras Abuela",     barcode: "04569432", qty: 500,   checked: false },
+  { sku: "CARTAS-1", nombre: "100 Aventuras en Cartas",  barcode: "04569432", qty: 500,   checked: true  },
+  { sku: "AMIGAS-2", nombre: "100 Aventuras en amigos",  barcode: "04569432", qty: 500,   checked: false },
 ];
 
-type Props = { onClose: () => void; onAdd: (products: Product[]) => void };
+// ─── Checkbox component ───────────────────────────────────────────────────────
+function Checkbox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={`inline-flex w-5 h-5 rounded items-center justify-center flex-shrink-0 transition-colors ${
+        checked ? "bg-indigo-600" : "bg-white border-2 border-gray-300"
+      }`}
+    >
+      {checked && (
+        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+          <path
+            d="M2 6l3 3 5-5"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
+    </span>
+  );
+}
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+type Props = {
+  onClose: () => void;
+  onAdd: (products: AddProduct[]) => void;
+};
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
 export default function ProductsModal({ onClose, onAdd }: Props) {
-  const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [search,   setSearch]   = useState("");
+  const [products, setProducts] = useState<ModalProduct[]>(MOCK_PRODUCTS);
 
   const filtered = products.filter(
     (p) =>
@@ -27,108 +73,131 @@ export default function ProductsModal({ onClose, onAdd }: Props) {
       p.barcode.includes(search)
   );
 
-  const updateQty = (sku: string, qty: number) => {
-    setProducts((prev) => prev.map((p) => (p.sku === sku ? { ...p, qty: Math.max(0, qty) } : p)));
+  const toggleCheck = (sku: string) =>
+    setProducts((prev) =>
+      prev.map((p) => (p.sku === sku ? { ...p, checked: !p.checked } : p))
+    );
+
+  const updateQty = (sku: string, raw: string) => {
+    const qty = Math.max(0, parseInt(raw) || 0);
+    setProducts((prev) =>
+      prev.map((p) => (p.sku === sku ? { ...p, qty } : p))
+    );
   };
 
-  const selected = products.filter((p) => p.qty > 0);
+  const selected = products.filter((p) => p.checked);
+
+  const handleAdd = () => {
+    onAdd(selected.map(({ sku, nombre, barcode, qty }) => ({ sku, nombre, barcode, qty })));
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 shadow-2xl flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Agregar / Buscar Productos</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded">
-            <X className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div
+        className="bg-white rounded-3xl w-full max-w-2xl mx-4 shadow-2xl flex flex-col p-6 gap-5"
+        style={{ maxHeight: "90vh" }}
+      >
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Agregar productos</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
+          >
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-6 py-4 border-b border-gray-100 flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Busca por SKU, nombre o código de barras"
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              autoFocus
-            />
-          </div>
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-            Filtros <ChevronDown className="w-3.5 h-3.5" />
-          </button>
+        {/* ── Search ──────────────────────────────────────────────────────── */}
+        <div className="relative">
+          <SearchLg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Busca por SKU, nombre o código de barras"
+            className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            autoFocus
+          />
         </div>
 
-        {/* Table */}
-        <div className="flex-1 overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">SKU</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nombre</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Código de barras</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock actual</th>
-                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((product) => (
-                <tr key={product.sku} className="hover:bg-gray-50">
-                  <td className="py-3 px-4 font-medium text-gray-700">{product.sku}</td>
-                  <td className="py-3 px-4 text-gray-700">{product.nombre}</td>
-                  <td className="py-3 px-4 text-gray-500 font-mono text-xs">{product.barcode}</td>
-                  <td className="py-3 px-4 text-gray-600">{product.stock}</td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQty(product.sku, product.qty - 1)}
-                        className="w-7 h-7 border border-gray-200 rounded flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium"
-                      >
-                        −
-                      </button>
+        {/* ── Table card ──────────────────────────────────────────────────── */}
+        <div
+          className="border border-gray-200 rounded-2xl overflow-hidden flex flex-col flex-1 min-h-0"
+        >
+          {/* Scrollable area */}
+          <div className="overflow-y-auto flex-1">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-5 font-semibold text-gray-900 w-24">Agregar</th>
+                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Nombre</th>
+                  <th className="text-left py-3 px-5 font-semibold text-gray-900">SKU</th>
+                  <th className="text-left py-3 px-5 font-semibold text-gray-900">C. de barras</th>
+                  <th className="text-left py-3 px-5 font-semibold text-gray-900">Cantidad</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filtered.map((product, i) => (
+                  <tr
+                    key={`${product.sku}-${i}`}
+                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/60 transition-colors cursor-pointer"
+                    onClick={() => toggleCheck(product.sku)}
+                  >
+                    {/* Checkbox */}
+                    <td className="py-4 px-5">
+                      <Checkbox checked={product.checked} />
+                    </td>
+
+                    {/* Nombre */}
+                    <td className="py-4 px-5 text-gray-700">{product.nombre}</td>
+
+                    {/* SKU */}
+                    <td className="py-4 px-5 text-gray-700">{product.sku}</td>
+
+                    {/* Barcode */}
+                    <td className="py-4 px-5 text-gray-700">{product.barcode}</td>
+
+                    {/* Cantidad — stop row click when editing */}
+                    <td className="py-4 px-5" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="number"
                         value={product.qty}
-                        onChange={(e) => updateQty(product.sku, parseInt(e.target.value) || 0)}
-                        className="w-14 border border-gray-200 rounded px-2 py-1 text-center text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        onChange={(e) => updateQty(product.sku, e.target.value)}
+                        className="w-24 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
-                      <button
-                        onClick={() => updateQty(product.sku, product.qty + 1)}
-                        className="w-7 h-7 border border-gray-200 rounded flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Selected count — pinned bottom of card */}
+          <div className="border-t border-gray-100 py-3.5 text-center text-sm text-gray-500 bg-white">
+            {selected.length > 0
+              ? `${selected.length} Producto${selected.length !== 1 ? "s" : ""} seleccionado${selected.length !== 1 ? "s" : ""}`
+              : "Sin productos seleccionados"}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-          <p className="text-sm text-gray-500">
-            {selected.length > 0
-              ? `${selected.length} producto${selected.length > 1 ? "s" : ""} seleccionado${selected.length > 1 ? "s" : ""}`
-              : "Sin productos seleccionados"}
-          </p>
-          <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-white">
-              Cancelar
-            </button>
-            <button
-              onClick={() => { onAdd(selected); onClose(); }}
-              disabled={selected.length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-200 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Agregar {selected.length > 0 ? `(${selected.length})` : "productos"}
-            </button>
-          </div>
+        {/* ── Footer ──────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+          >
+            Cerrar
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={selected.length === 0}
+            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            Agregar
+          </button>
         </div>
       </div>
     </div>

@@ -8,10 +8,10 @@ import {
   Package, ArrowRight, ChevronLeft, ChevronRight, Check
 } from "lucide-react";
 import StepIndicator from "@/components/recepciones/StepIndicator";
-import ProductsModal from "@/components/recepciones/ProductsModal";
+import ProductsModal, { AddProduct } from "@/components/recepciones/ProductsModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Product = { sku: string; nombre: string; barcode: string; stock: number; qty: number };
+type Product = { sku: string; nombre: string; barcode: string; qty: number };
 
 type FormData = {
   sucursal: string;
@@ -250,13 +250,13 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState("");
 
-  const addProducts = (products: Product[]) => {
+  const addProducts = (incoming: AddProduct[]) => {
     setForm(f => {
       const existing = [...f.products];
-      products.forEach(p => {
+      incoming.forEach(p => {
         const idx = existing.findIndex(e => e.sku === p.sku);
         if (idx >= 0) existing[idx] = { ...existing[idx], qty: existing[idx].qty + p.qty };
-        else existing.push(p);
+        else existing.push({ sku: p.sku, nombre: p.nombre, barcode: p.barcode, qty: p.qty });
       });
       return { ...f, products: existing };
     });
