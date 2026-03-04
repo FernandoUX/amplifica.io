@@ -103,7 +103,7 @@ export default function ProductsModal({ onClose, onAdd }: Props) {
           <h2 className="text-2xl font-bold text-gray-900">Agregar productos</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -187,14 +187,14 @@ export default function ProductsModal({ onClose, onAdd }: Props) {
         <div className="flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
           >
             Cerrar
           </button>
           <button
             onClick={handleAdd}
             disabled={selected.length === 0}
-            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-colors"
+            className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors"
           >
             Agregar
           </button>
