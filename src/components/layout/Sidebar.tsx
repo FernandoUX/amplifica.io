@@ -90,7 +90,7 @@ export default function Sidebar() {
           <button className="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-1.5 text-xs transition-colors">
             <div className="text-left">
               <p className="text-white/40 text-[10px] leading-none mb-0.5">Tienda</p>
-              <p className="text-white font-medium">100 Aventuras</p>
+              <p className="text-white font-medium">Extra Life</p>
             </div>
             <ChevronUp className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
           </button>
