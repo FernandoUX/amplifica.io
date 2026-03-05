@@ -434,6 +434,8 @@ function OrdenesPageInner() {
 
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDir,   setSortDir]   = useState<SortDir>("asc");
+  const [pageSize,  setPageSize]  = useState(10);
+  const [page,      setPage]      = useState(1);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -478,6 +480,17 @@ function OrdenesPageInner() {
     }
     return rows;
   }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes]);
+
+  // Reset to page 1 whenever filters/tabs/search change
+  useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);
+
+  // ── Paginated slice ──
+  const totalPages   = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const clampedPage  = Math.min(page, totalPages);
+  const startIdx     = (clampedPage - 1) * pageSize;
+  const paginatedRows = filtered.slice(startIdx, startIdx + pageSize);
+  const fromRow      = filtered.length === 0 ? 0 : startIdx + 1;
+  const toRow        = Math.min(startIdx + pageSize, filtered.length);
 
   return (
     <div className="p-6 min-w-0">
@@ -806,7 +819,7 @@ function OrdenesPageInner() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((orden, i) => (
+                paginatedRows.map((orden, i) => (
                   <tr
                     key={`${orden.id}-${i}`}
                     className={`hover:bg-gray-50/60 transition-colors group ${
@@ -897,17 +910,39 @@ function OrdenesPageInner() {
         <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500" style={NW}>Mostrar</span>
-            <select className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option>10</option><option>25</option><option>50</option>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="border border-gray-200 rounded-lg px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
             </select>
             <span className="text-sm text-gray-400" style={NW}>
               {filtered.length} resultado{filtered.length !== 1 ? "s" : ""}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50" style={NW}>← Anterior</button>
-            <span className="text-sm text-gray-500 tabular-nums" style={NW}>1 — {filtered.length}</span>
-            <button className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50" style={NW}>Siguiente →</button>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={clampedPage <= 1}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              style={NW}
+            >
+              ← Anterior
+            </button>
+            <span className="text-sm text-gray-500 tabular-nums" style={NW}>
+              {fromRow}–{toRow} de {filtered.length}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={clampedPage >= totalPages}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              style={NW}
+            >
+              Siguiente →
+            </button>
           </div>
         </div>
       </div>

@@ -112,7 +112,7 @@ export default function Sidebar() {
       )}
 
       {/* ── Menu ─────────────────────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto py-2 px-2">
+      <nav className="flex-1 overflow-y-auto py-2 px-2 sidebar-scroll">
         {!collapsed && (
           <p className="text-white/25 text-[9px] px-2 mb-1.5 uppercase tracking-widest font-medium">
             Menú
