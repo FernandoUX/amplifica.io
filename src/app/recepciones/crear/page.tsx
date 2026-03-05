@@ -552,6 +552,7 @@ function CrearORPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialStep = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
+  const isReagendar  = searchParams.get("mode") === "reagendar";
   const [step, setStep] = useState(initialStep);
   const [form, setForm] = useState<FormData>({
     sucursal: "Quilicura", tienda: "100 Aventuras",
@@ -568,7 +569,7 @@ function CrearORPageInner() {
   };
 
   const handleSubmit = () => {
-    router.push("/recepciones?created=1");
+    router.push(isReagendar ? "/recepciones?rescheduled=1" : "/recepciones?created=1");
   };
 
   return (
@@ -578,14 +579,18 @@ function CrearORPageInner() {
         <nav className="max-w-3xl mx-auto px-6 py-3 flex items-center gap-2 text-sm text-gray-500">
           <Link href="/recepciones" className="hover:text-indigo-600">Recepciones</Link>
           <ChevronRight className="w-3.5 h-3.5" />
-          <span className="text-gray-800 font-medium">Nueva Orden de Recepción</span>
+          <span className="text-gray-800 font-medium">
+            {isReagendar ? "Reagendar Orden de Recepción" : "Nueva Orden de Recepción"}
+          </span>
         </nav>
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* Title */}
         <div className="flex items-center gap-2 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Nueva Orden de Recepción</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isReagendar ? "Reagendar Orden de Recepción" : "Nueva Orden de Recepción"}
+          </h1>
           <button className="text-gray-400 hover:text-gray-600 text-base">ⓘ</button>
         </div>
 
@@ -604,7 +609,7 @@ function CrearORPageInner() {
         {/* Footer actions */}
         <div className="flex items-center justify-between mt-6">
           <button
-            onClick={() => step === 1 ? router.push("/recepciones") : setStep(s => s - 1)}
+            onClick={() => (step === 1 || (isReagendar && step === 3)) ? router.push("/recepciones") : setStep(s => s - 1)}
             className="px-5 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
           >
             Volver
@@ -624,7 +629,8 @@ function CrearORPageInner() {
               disabled={!canContinue()}
               className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-200 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              <Check className="w-4 h-4" /> Crear Orden de Recepción
+              <Check className="w-4 h-4" />
+              {isReagendar ? "Guardar nueva fecha" : "Crear Orden de Recepción"}
             </button>
           )}
         </div>
