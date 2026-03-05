@@ -552,8 +552,9 @@ function CrearORPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialStep = Math.max(1, Math.min(3, parseInt(searchParams.get("startStep") ?? "1") || 1));
-  const isReagendar  = searchParams.get("mode") === "reagendar";
-  const [step, setStep] = useState(initialStep);
+  const isReagendar   = searchParams.get("mode") === "reagendar";
+  const [step,        setStep]        = useState(initialStep);
+  const [maxReached,  setMaxReached]  = useState(initialStep);
   const [form, setForm] = useState<FormData>({
     sucursal: "Quilicura", tienda: "100 Aventuras",
     pallets: "", bultos: "", desconoceFormato: false,
@@ -596,7 +597,11 @@ function CrearORPageInner() {
 
         {/* Stepper */}
         <div className="mb-8">
-          <StepIndicator current={step} />
+          <StepIndicator
+            current={step}
+            maxReached={maxReached}
+            onStepClick={n => setStep(n)}
+          />
         </div>
 
         {/* Content card */}
@@ -617,7 +622,10 @@ function CrearORPageInner() {
 
           {step < 3 ? (
             <button
-              onClick={() => setStep(s => s + 1)}
+              onClick={() => {
+                setStep(s => s + 1);
+                setMaxReached(m => Math.max(m, step + 1));
+              }}
               disabled={!canContinue()}
               className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-200 text-white text-sm font-medium rounded-lg transition-colors"
             >
