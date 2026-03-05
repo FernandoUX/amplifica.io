@@ -217,7 +217,13 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
 
   return (
     <div className="space-y-5">
-      {showModal && <ProductsModal onClose={() => setShowModal(false)} onAdd={addProducts} />}
+      {showModal && (
+        <ProductsModal
+          onClose={() => { setShowModal(false); setSearch(""); }}
+          onAdd={addProducts}
+          initialSearch={search}
+        />
+      )}
 
       {/* Warning */}
       <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -239,9 +245,10 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            readOnly
+            onClick={() => setShowModal(true)}
             placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-600"
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-600 cursor-pointer"
           />
         </div>
         <button className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">

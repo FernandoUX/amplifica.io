@@ -59,11 +59,12 @@ function Checkbox({ checked }: { checked: boolean }) {
 type Props = {
   onClose: () => void;
   onAdd: (products: AddProduct[]) => void;
+  initialSearch?: string;
 };
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
-export default function ProductsModal({ onClose, onAdd }: Props) {
-  const [search,   setSearch]   = useState("");
+export default function ProductsModal({ onClose, onAdd, initialSearch = "" }: Props) {
+  const [search,   setSearch]   = useState(initialSearch);
   const [products, setProducts] = useState<ModalProduct[]>(MOCK_PRODUCTS);
 
   const filtered = products.filter(
