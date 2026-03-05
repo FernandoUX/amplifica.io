@@ -77,7 +77,7 @@ function Step1({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
               onChange={e => setForm(f => ({ ...f, tienda: e.target.value }))}
               className="w-full appearance-none border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-10"
             >
-              <option>100 Aventuras</option>
+              <option>Extra Life</option>
               <option>Outdoor Shop</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -248,7 +248,7 @@ function Step2({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
             readOnly
             onClick={() => setShowModal(true)}
             placeholder="Busca por SKU, nombre o código de barras"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-600 cursor-pointer"
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400 cursor-pointer"
           />
         </div>
         <button className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">
@@ -563,7 +563,7 @@ function CrearORPageInner() {
   const [step,        setStep]        = useState(initialStep);
   const [maxReached,  setMaxReached]  = useState(initialStep);
   const [form, setForm] = useState<FormData>({
-    sucursal: "Quilicura", tienda: "100 Aventuras",
+    sucursal: "Quilicura", tienda: "Extra Life",
     pallets: "", bultos: "", desconoceFormato: false,
     comentarios: "", guiaDespacho: null, products: [],
     fechaReserva: "", horaReserva: "",
