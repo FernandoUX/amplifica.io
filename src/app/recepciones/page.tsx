@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useState, useMemo, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -57,6 +58,19 @@ function makeTags(opts: {
   return tags;
 }
 
+// ─── Tag filter options (for filter modal) ────────────────────────────────────
+const TAG_FILTER_OPTIONS: {
+  label: string;
+  key: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  iconClass: string;
+}[] = [
+  { label: "Sin diferencias",         key: "sin diferencias",         Icon: CheckCircle,   iconClass: "text-green-600" },
+  { label: "Con diferencias",         key: "con diferencias",         Icon: AlertTriangle, iconClass: "text-amber-500" },
+  { label: "No pickeables",           key: "no pickeables",           Icon: XCircle,       iconClass: "text-red-500"   },
+  { label: "Pendiente de aprobación", key: "pendiente de aprobación", Icon: ClockRefresh,  iconClass: "text-orange-500"},
+];
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
   // Creado — sin fecha agendada aún
@@ -65,20 +79,20 @@ const ORDENES: Orden[] = [
   // Programado
   { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
   { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 15, uTotales: "450" },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Naturela", sucursal: "Pudahuel", estado: "Programado", skus: 15, uTotales: "450" },
 
   // Recepcionado en bodega
-  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Naturela", sucursal: "Pudahuel", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
 
   // En proceso de conteo
   { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "SportZone", sucursal: "Lo Espejo", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
 
   // Feature 2 — Parcialmente recepcionada: padre + sub-IDs
-  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
+  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Espejo", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Espejo", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
     tags: makeTags({ sinDiferencias: 1150, conDiferencias: 50 }) },
-  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
+  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Espejo", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
 
   // Cancelada
   { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Cancelada", skus: 320, uTotales: "2.550" },
@@ -86,9 +100,9 @@ const ORDENES: Orden[] = [
   // Feature 4 — Completadas con tags de resultado
   { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Naturela", sucursal: "Pudahuel", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ conDiferencias: 20, pendiente: true }) },
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Naturela", sucursal: "Pudahuel", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
 ];
 
@@ -214,17 +228,18 @@ function getActions(estado: Status): ActionConfig {
 }
 
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-// • Primary → secondary style, icon-only; tooltip uses position:fixed to escape overflow clipping
-// • Dots    → opens a fixed-position popover BELOW the button
 function ActionsCell({ orden }: { orden: Orden }) {
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
+  const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
   const { primary, menu } = getActions(orden.estado);
   const Icon = primary?.icon;
 
-  // Close dropdown on outside click
+  // Portal only works client-side
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     if (!menuPos) return;
     function onDocClick() { setMenuPos(null); }
@@ -241,7 +256,6 @@ function ActionsCell({ orden }: { orden: Orden }) {
     }
   };
 
-  // Compute tooltip position on each render — fixed so it escapes overflow:auto
   const tipPos = tipVisible && primaryWrap.current
     ? (() => {
         const r = primaryWrap.current!.getBoundingClientRect();
@@ -253,8 +267,6 @@ function ActionsCell({ orden }: { orden: Orden }) {
 
   return (
     <div className="flex items-center gap-1">
-
-      {/* ── Primary: icon-only button (Link when href, otherwise button) ── */}
       {primary && Icon && (
         <div
           ref={primaryWrap}
@@ -273,7 +285,6 @@ function ActionsCell({ orden }: { orden: Orden }) {
         </div>
       )}
 
-      {/* ── Dots: opens dropdown ── */}
       <button
         ref={dotsRef}
         onClick={toggleMenu}
@@ -284,15 +295,15 @@ function ActionsCell({ orden }: { orden: Orden }) {
         <DotsVertical className="w-4 h-4" />
       </button>
 
-      {/* ── Tooltip — fixed position to escape overflow clipping ── */}
-      {tipPos && primary && (
+      {/* ── Tooltip — portal to body so sticky/overflow never clips it ── */}
+      {mounted && tipPos && primary && createPortal(
         <div
           style={{
             position: "fixed",
             top:  tipPos.top,
             left: tipPos.left,
             transform: "translateX(-50%)",
-            zIndex: 9999,
+            zIndex: 2147483647,
             pointerEvents: "none",
           }}
         >
@@ -300,13 +311,14 @@ function ActionsCell({ orden }: { orden: Orden }) {
             {primary.tooltip}
           </div>
           <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900" />
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* ── Dropdown — fixed, opens BELOW the dots button ── */}
-      {menuPos && (
+      {/* ── Dropdown — portal to body so table rows never stack above it ── */}
+      {mounted && menuPos && createPortal(
         <div
-          style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 9999 }}
+          style={{ position: "fixed", top: menuPos.top, right: menuPos.right, zIndex: 2147483647 }}
           className="bg-white border border-gray-200 rounded-xl shadow-xl py-1.5 min-w-[192px]"
           onMouseDown={e => e.stopPropagation()}
         >
@@ -328,8 +340,48 @@ function ActionsCell({ orden }: { orden: Orden }) {
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
+    </div>
+  );
+}
+
+// ─── Filter Section component ─────────────────────────────────────────────────
+function FilterSection({
+  title,
+  options,
+  selected,
+  onToggle,
+  renderOption,
+}: {
+  title: string;
+  options: string[];
+  selected: Set<string>;
+  onToggle: (val: string) => void;
+  renderOption?: (val: string) => React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{title}</p>
+      <div className="space-y-1">
+        {options.map(opt => (
+          <label
+            key={opt}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group"
+          >
+            <input
+              type="checkbox"
+              checked={selected.has(opt)}
+              onChange={() => onToggle(opt)}
+              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+            {renderOption ? renderOption(opt) : (
+              <span className="text-sm text-gray-700">{opt}</span>
+            )}
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
@@ -339,10 +391,38 @@ function OrdenesPageInner() {
   const searchParams = useSearchParams();
   const router       = useRouter();
 
-  const [activeTab, setActiveTab] = useState<string>("Todas");
-  const [showToast, setShowToast] = useState(false);
-  const [showInfo,  setShowInfo]  = useState(false);
-  const [search,    setSearch]    = useState("");
+  const [activeTab,   setActiveTab]   = useState<string>("Todas");
+  const [showToast,   setShowToast]   = useState(false);
+  const [showInfo,    setShowInfo]    = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [search,      setSearch]      = useState("");
+
+  // ── Filter state ──
+  const [filterSellers,    setFilterSellers]    = useState<Set<string>>(new Set());
+  const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
+  const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
+
+  // ── Filter options (unique values from data) ──
+  const allSellers    = useMemo(() => [...new Set(ORDENES.map(o => o.seller))].sort(), []);
+  const allSucursales = useMemo(() => [...new Set(ORDENES.map(o => o.sucursal))].sort(), []);
+
+  // ── Active filter count (for badge) ──
+  const activeFilterCount = filterSellers.size + filterSucursales.size + filterTagTypes.size;
+
+  // ── Toggle helper ──
+  const toggleInSet = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, val: string) => {
+    setter(prev => {
+      const next = new Set(prev);
+      if (next.has(val)) next.delete(val); else next.add(val);
+      return next;
+    });
+  };
+
+  const clearAllFilters = () => {
+    setFilterSellers(new Set());
+    setFilterSucursales(new Set());
+    setFilterTagTypes(new Set());
+  };
 
   // Mostrar toast solo cuando viene de crear una OR
   useEffect(() => {
@@ -364,6 +444,15 @@ function OrdenesPageInner() {
     let rows = [...ORDENES];
     const statusFilter = TAB_STATUS[activeTab];
     if (statusFilter) rows = rows.filter(o => o.estado === statusFilter);
+
+    // ── Apply multiselect filters ──
+    if (filterSellers.size > 0)    rows = rows.filter(o => filterSellers.has(o.seller));
+    if (filterSucursales.size > 0) rows = rows.filter(o => filterSucursales.has(o.sucursal));
+    if (filterTagTypes.size > 0)   rows = rows.filter(o =>
+      o.tags?.some(t =>
+        [...filterTagTypes].some(ft => t.label.toLowerCase().includes(ft))
+      ) ?? false
+    );
 
     const q = search.trim().toLowerCase();
     if (q) {
@@ -388,7 +477,7 @@ function OrdenesPageInner() {
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes]);
 
   return (
     <div className="p-6 min-w-0">
@@ -441,6 +530,96 @@ function OrdenesPageInner() {
         </div>
       )}
 
+      {/* ── Filter modal ── */}
+      {showFilters && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.35)" }}
+          onMouseDown={() => setShowFilters(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col overflow-hidden"
+            onMouseDown={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Sliders01 className="w-4 h-4 text-gray-600" />
+                </div>
+                <h2 className="text-base font-semibold text-gray-900">Filtros</h2>
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-5 overflow-y-auto max-h-[60vh]">
+              {/* Seller */}
+              <FilterSection
+                title="Seller"
+                options={allSellers}
+                selected={filterSellers}
+                onToggle={v => toggleInSet(setFilterSellers, v)}
+              />
+
+              {/* Sucursales */}
+              <FilterSection
+                title="Sucursal"
+                options={allSucursales}
+                selected={filterSucursales}
+                onToggle={v => toggleInSet(setFilterSucursales, v)}
+              />
+
+              {/* Tags de resultado */}
+              <FilterSection
+                title="Estado de productos"
+                options={TAG_FILTER_OPTIONS.map(t => t.key)}
+                selected={filterTagTypes}
+                onToggle={v => toggleInSet(setFilterTagTypes, v)}
+                renderOption={key => {
+                  const opt = TAG_FILTER_OPTIONS.find(t => t.key === key);
+                  if (!opt) return <span className="text-sm text-gray-700">{key}</span>;
+                  const OptIcon = opt.Icon;
+                  return (
+                    <span className="flex items-center gap-2">
+                      <OptIcon className={`w-4 h-4 flex-shrink-0 ${opt.iconClass}`} />
+                      <span className="text-sm text-gray-700">{opt.label}</span>
+                    </span>
+                  );
+                }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors disabled:opacity-40"
+                disabled={activeFilterCount === 0}
+              >
+                Limpiar filtros
+              </button>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-center justify-between mb-5 gap-4">
         <div className="flex items-center gap-2 min-w-0">
@@ -477,11 +656,12 @@ function OrdenesPageInner() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4">
-        {/* Tabs */}
+        {/* ── Tabs with horizontal scroll ── */}
         <div
-          className="flex items-center gap-1 overflow-x-auto flex-1"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}
+          className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
         >
+          <style>{`.tabs-scroll::-webkit-scrollbar { display: none; }`}</style>
           {TABS.map(tab => (
             <button
               key={tab}
@@ -495,10 +675,33 @@ function OrdenesPageInner() {
             </button>
           ))}
         </div>
+
         {/* Right controls */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"><Sliders01 className="w-4 h-4 text-gray-500" /></button>
-          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50"><LayoutGrid01 className="w-4 h-4 text-gray-500" /></button>
+          {/* ── Filters button — opens filter modal ── */}
+          <button
+            onClick={() => setShowFilters(true)}
+            className={`relative p-2 border rounded-lg transition-colors ${
+              activeFilterCount > 0
+                ? "border-indigo-300 bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+            }`}
+          >
+            <Sliders01 className="w-4 h-4" />
+            {activeFilterCount > 0 && (
+              <span
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+                style={{ lineHeight: 1 }}
+              >
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <LayoutGrid01 className="w-4 h-4 text-gray-500" />
+          </button>
+
           <div className="relative">
             <SearchLg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <input
@@ -517,6 +720,45 @@ function OrdenesPageInner() {
         </div>
       </div>
 
+      {/* Active filter chips */}
+      {activeFilterCount > 0 && (
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium">Filtros activos:</span>
+          {[...filterSellers].map(s => (
+            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+              {s}
+              <button onClick={() => toggleInSet(setFilterSellers, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          {[...filterSucursales].map(s => (
+            <span key={s} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+              {s}
+              <button onClick={() => toggleInSet(setFilterSucursales, s)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          {[...filterTagTypes].map(k => {
+            const opt = TAG_FILTER_OPTIONS.find(t => t.key === k);
+            const ChipIcon = opt?.Icon;
+            return (
+              <span key={k} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full font-medium">
+                {ChipIcon && <ChipIcon className={`w-3 h-3 ${opt?.iconClass}`} />}
+                {opt?.label ?? k}
+                <button onClick={() => toggleInSet(setFilterTagTypes, k)} className="ml-0.5 text-indigo-400 hover:text-indigo-600">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+          <button onClick={clearAllFilters} className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2">
+            Limpiar todo
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="overflow-x-auto w-full">
@@ -524,10 +766,7 @@ function OrdenesPageInner() {
 
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {/* ID */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>ID</th>
-
-                {/* Creación — sortable */}
                 <th
                   className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none"
                   style={NW}
@@ -536,8 +775,6 @@ function OrdenesPageInner() {
                   Creación
                   <SortIcon field="creacion" sortField={sortField} sortDir={sortDir} />
                 </th>
-
-                {/* Fecha agendada — sortable */}
                 <th
                   className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 select-none"
                   style={NW}
@@ -546,21 +783,12 @@ function OrdenesPageInner() {
                   F. Agendada
                   <SortIcon field="fechaAgendada" sortField={sortField} sortDir={sortDir} />
                 </th>
-
-                {/* Seller */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Seller</th>
-                {/* Sucursal */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Sucursal</th>
-                {/* Estado */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Estado</th>
-                {/* SKUs */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>SKUs</th>
-                {/* Unidades */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Unidades</th>
-                {/* Feature 4: Tags de Resultado */}
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>Tags de Resultado</th>
-
-                {/* Sticky Acciones */}
                 <th
                   className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50"
                   style={{ ...NW, ...stickyRight }}
@@ -585,8 +813,6 @@ function OrdenesPageInner() {
                       orden.isSubId ? "bg-gray-50/40" : ""
                     }`}
                   >
-
-                    {/* ── ID — Feature 2: sub-ID visual indicator ── */}
                     <td className="py-3 px-4" style={NW}>
                       {orden.isSubId ? (
                         <span className="flex items-center gap-1">
@@ -608,10 +834,8 @@ function OrdenesPageInner() {
                       )}
                     </td>
 
-                    {/* ── Creación ── */}
                     <td className="py-3 px-4 text-gray-600" style={NW}>{orden.creacion}</td>
 
-                    {/* ── Fecha agendada + badge ── */}
                     <td className="py-3 px-4">
                       <p className="text-gray-700" style={NW}>
                         {orden.fechaAgendada === "—"
@@ -628,22 +852,12 @@ function OrdenesPageInner() {
                       )}
                     </td>
 
-                    {/* ── Seller ── */}
                     <td className="py-3 px-4 text-gray-600" style={NW}>{orden.seller}</td>
-
-                    {/* ── Sucursal ── */}
                     <td className="py-3 px-4 text-gray-600" style={NW}>{orden.sucursal}</td>
-
-                    {/* ── Estado ── */}
                     <td className="py-3 px-4" style={NW}><StatusBadge status={orden.estado} /></td>
-
-                    {/* ── SKUs ── */}
                     <td className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>{orden.skus}</td>
-
-                    {/* ── Unidades ── */}
                     <td className="py-3 px-4 text-gray-700 tabular-nums" style={NW}>{orden.uTotales}</td>
 
-                    {/* ── Feature 4: Tags de Resultado ── */}
                     <td className="py-3 px-4">
                       {orden.tags && orden.tags.length > 0 ? (
                         <div className="flex flex-col gap-1">
@@ -666,7 +880,6 @@ function OrdenesPageInner() {
                       )}
                     </td>
 
-                    {/* ── Sticky Acciones — contextual por estado ── */}
                     <td
                       className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
                       style={{ ...NW, ...stickyRight }}
