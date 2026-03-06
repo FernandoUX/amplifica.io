@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useMemo, useRef, useEffect } from "react";
 import {
   ChevronRight, Trash2, Scan, ImageOff,
   Clock, User, PlayCircle, StopCircle,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
-  X, Check,
+  X, Check, Upload,
 } from "lucide-react";
 import {
-  Plus, ClipboardCheck, LockUnlocked01,
+  Plus, ClipboardCheck, LockUnlocked01, AlertTriangle,
 } from "@untitled-ui/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,6 +45,32 @@ type OrdenData = {
   sucursal: string;
   fechaAgendada: string;
   products: ProductConteo[];
+};
+
+type IncidenciaTagKey =
+  | "sin-codigo-barra" | "codigo-incorrecto" | "codigo-ilegible"
+  | "sin-nutricional"  | "sin-vencimiento"
+  | "danio-parcial"    | "danio-total"
+  | "no-en-sistema";
+
+type IncidenciaRow = {
+  rowId: string;
+  skuId: string;
+  tag: IncidenciaTagKey | "";
+  cantidad: number;
+  imagenes: File[];
+  nota: string;
+  descripcion: string;    // only for "no-en-sistema"
+};
+
+type NewProductForm = {
+  nombre: string;
+  sku: string;
+  barcode: string;
+  cantidad: string;
+  imagen: File | null;
+  comentarios: string;
+  categoria: string;
 };
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
@@ -93,6 +119,23 @@ function sesionId(n: number) { return `SES-${String(n).padStart(3, "0")}`; }
 // ─── Categorizar dropdown ─────────────────────────────────────────────────────
 const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso"];
 
+// ─── Incidencia tags ──────────────────────────────────────────────────────────
+const INCIDENCIA_TAGS: {
+  key: IncidenciaTagKey;
+  label: string;
+  color: "amber" | "red" | "orange" | "purple";
+  resuelve: string;
+}[] = [
+  { key: "sin-codigo-barra",  label: "Sin código de barra",        color: "amber",  resuelve: "Amplifica — re-etiquetado" },
+  { key: "codigo-incorrecto", label: "Código de barra incorrecto", color: "amber",  resuelve: "Amplifica — re-etiquetado" },
+  { key: "codigo-ilegible",   label: "Código de barra ilegible",   color: "amber",  resuelve: "Amplifica — re-etiquetado" },
+  { key: "sin-nutricional",   label: "Sin etiqueta nutricional",   color: "red",    resuelve: "Seller — devolución obligatoria" },
+  { key: "sin-vencimiento",   label: "Sin fecha de vencimiento",   color: "red",    resuelve: "Seller — devolución obligatoria" },
+  { key: "danio-parcial",     label: "Daño parcial",               color: "orange", resuelve: "Seller decide (KAM consulta)" },
+  { key: "danio-total",       label: "Daño total",                 color: "red",    resuelve: "Seller decide (KAM consulta)" },
+  { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple", resuelve: "Amplifica — creación de SKU" },
+];
+
 function CategorizarBtn() {
   const [open, setOpen] = useState(false);
   const [sel,  setSel]  = useState<string | null>(null);
@@ -116,7 +159,7 @@ function CategorizarBtn() {
         <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
+        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
           {CATEGORIAS.map(c => (
             <button key={c} onClick={() => { setSel(c); setOpen(false); }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${sel === c ? "text-indigo-600 font-medium" : "text-gray-700"}`}
@@ -384,9 +427,425 @@ function SesionRow({ sesion }: { sesion: Sesion }) {
   );
 }
 
+// ─── IncidenciaRowCard ────────────────────────────────────────────────────────
+function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImages, onRemoveImage }: {
+  row: IncidenciaRow;
+  index: number;
+  product: ProductConteo;
+  onUpdate: (rowId: string, update: Partial<IncidenciaRow>) => void;
+  onRemove: (rowId: string) => void;
+  onAddImages: (rowId: string, files: FileList) => void;
+  onRemoveImage: (rowId: string, idx: number) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const tag = INCIDENCIA_TAGS.find(t => t.key === row.tag);
+
+  return (
+    <div className="px-4 py-4 border-t border-gray-100 space-y-3 bg-gray-50/50">
+      {/* Row header */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Incidencia #{index + 1}</span>
+        <button onClick={() => onRemove(row.rowId)} className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded">
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Tag + Cantidad */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 font-medium mb-1.5">Tipo de incidencia *</label>
+          <div className="relative">
+            <select
+              value={row.tag}
+              onChange={e => onUpdate(row.rowId, { tag: e.target.value as IncidenciaTagKey | "" })}
+              className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
+            >
+              <option value="">Seleccione</option>
+              {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 font-medium mb-1.5">Cantidad afectada *</label>
+          <input
+            type="number" min={1} max={product.esperadas}
+            value={row.cantidad}
+            onChange={e => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(e.target.value) || 1) })}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          />
+        </div>
+      </div>
+
+      {/* Description — only for "no-en-sistema" */}
+      {row.tag === "no-en-sistema" && (
+        <div>
+          <label className="block text-xs text-gray-400 font-medium mb-1.5">Descripción del producto *</label>
+          <textarea
+            value={row.descripcion}
+            onChange={e => onUpdate(row.rowId, { descripcion: e.target.value })}
+            placeholder="Nombre, código visible, descripción del producto no identificado..."
+            rows={2}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
+          />
+        </div>
+      )}
+
+      {/* Image upload */}
+      <div>
+        <label className="block text-xs text-gray-400 font-medium mb-1.5">
+          Imágenes * <span className="text-gray-300 font-normal">({row.imagenes.length}/5 · JPG o PNG · 5 MB máx)</span>
+        </label>
+        <input
+          ref={fileRef} type="file" className="hidden"
+          accept="image/jpeg,image/png" multiple
+          onChange={e => e.target.files && onAddImages(row.rowId, e.target.files)}
+        />
+        {row.imagenes.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {row.imagenes.map((img, i) => (
+              <div key={i} className="relative w-16 h-16 flex-shrink-0">
+                <img src={URL.createObjectURL(img)} alt="" className="w-16 h-16 object-cover rounded-lg border border-gray-200" />
+                <button
+                  onClick={() => onRemoveImage(row.rowId, i)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white shadow"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {row.imagenes.length < 5 && (
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/50 transition-colors"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {row.imagenes.length === 0 ? "Subir imagen" : "Agregar más"}
+          </button>
+        )}
+        {row.imagenes.length === 0 && (
+          <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" /> Requerida al menos 1 imagen
+          </p>
+        )}
+      </div>
+
+      {/* Nota */}
+      <div>
+        <label className="block text-xs text-gray-400 font-medium mb-1.5">Nota adicional <span className="font-normal">(opcional)</span></label>
+        <textarea
+          value={row.nota}
+          onChange={e => onUpdate(row.rowId, { nota: e.target.value })}
+          placeholder="Observaciones adicionales..."
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
+        />
+      </div>
+
+      {/* Tag resolution badge */}
+      {tag && (
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
+          tag.color === "amber"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
+          tag.color === "orange" ? "bg-orange-50 text-orange-700 border border-orange-200" :
+          tag.color === "purple" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                                   "bg-red-50 text-red-700 border border-red-200"
+        }`}>
+          Resuelve: <span className="font-semibold">{tag.resuelve}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── IncidenciasModal ─────────────────────────────────────────────────────────
+function IncidenciasModal({ products, onCancel, onSkip, onConfirm }: {
+  products: ProductConteo[];
+  onCancel: () => void;
+  onSkip: () => void;
+  onConfirm: (rows: IncidenciaRow[]) => void;
+}) {
+  const [rows, setRows] = useState<IncidenciaRow[]>([]);
+
+  const addRow = (skuId: string) =>
+    setRows(prev => [...prev, { rowId: Math.random().toString(36).slice(2), skuId, tag: "", cantidad: 1, imagenes: [], nota: "", descripcion: "" }]);
+
+  const updateRow = (rowId: string, update: Partial<IncidenciaRow>) =>
+    setRows(prev => prev.map(r => r.rowId === rowId ? { ...r, ...update } : r));
+
+  const removeRow = (rowId: string) =>
+    setRows(prev => prev.filter(r => r.rowId !== rowId));
+
+  const addImages = (rowId: string, files: FileList) => {
+    const row = rows.find(r => r.rowId === rowId);
+    if (!row) return;
+    const toAdd = Array.from(files)
+      .slice(0, 5 - row.imagenes.length)
+      .filter(f => (f.type === "image/jpeg" || f.type === "image/png") && f.size <= 5 * 1024 * 1024);
+    updateRow(rowId, { imagenes: [...row.imagenes, ...toAdd] });
+  };
+
+  const removeImage = (rowId: string, idx: number) => {
+    const row = rows.find(r => r.rowId === rowId);
+    if (!row) return;
+    updateRow(rowId, { imagenes: row.imagenes.filter((_, i) => i !== idx) });
+  };
+
+  const canContinue = rows.length === 0 || rows.every(r =>
+    r.tag !== "" && r.cantidad >= 1 && r.imagenes.length >= 1 &&
+    (r.tag !== "no-en-sistema" || r.descripcion.trim() !== "")
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Registrar incidencias</h3>
+            <p className="text-sm text-gray-400 mt-0.5">Categoriza los SKUs con problemas antes de cerrar la OR</p>
+          </div>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4 flex-shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+          {products.map(product => {
+            const productRows = rows.filter(r => r.skuId === product.id);
+            return (
+              <div key={product.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                {/* Product header */}
+                <div className="flex items-center gap-3 px-4 py-3 bg-white">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    {product.imagen
+                      ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
+                      : <ImageOff className="w-5 h-5 text-gray-300" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{product.nombre}</p>
+                    <p className="text-xs text-gray-400">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
+                  </div>
+                  <button
+                    onClick={() => addRow(product.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Agregar incidencia
+                  </button>
+                </div>
+                {/* Incidencia rows for this product */}
+                {productRows.map((row, idx) => (
+                  <IncidenciaRowCard
+                    key={row.rowId}
+                    row={row} index={idx} product={product}
+                    onUpdate={updateRow} onRemove={removeRow}
+                    onAddImages={addImages} onRemoveImage={removeImage}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
+          <button
+            onClick={onSkip}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+          >
+            Sin incidencias
+          </button>
+          <button
+            onClick={() => onConfirm(rows)}
+            disabled={!canContinue}
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+              canContinue ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <ClipboardCheck className="w-4 h-4" />
+            Continuar
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── AddProductModal ──────────────────────────────────────────────────────────
+function AddProductModal({ onCancel, onConfirm }: {
+  onCancel: () => void;
+  onConfirm: (product: ProductConteo) => void;
+}) {
+  const [form, setForm] = useState<NewProductForm>({
+    nombre: "", sku: "", barcode: "", cantidad: "1",
+    imagen: null, comentarios: "", categoria: "",
+  });
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const canConfirm = form.nombre.trim() !== "" && (parseInt(form.cantidad) || 0) >= 1;
+
+  const handleConfirm = () => {
+    if (!canConfirm) return;
+    onConfirm({
+      id: `custom-${Date.now()}`,
+      sku: form.sku.trim() || `SKU-${Date.now().toString().slice(-6)}`,
+      nombre: form.nombre.trim(),
+      barcode: form.barcode.trim() || `${Date.now()}`,
+      imagen: form.imagen ? URL.createObjectURL(form.imagen) : undefined,
+      esperadas: parseInt(form.cantidad) || 1,
+      contadasSesion: 0,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
+          <h3 className="text-xl font-bold text-gray-900">Añadir producto</h3>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* Nombre */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Nombre del producto *</label>
+            <input
+              type="text" value={form.nombre}
+              onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+              placeholder="Ej: Tropical Delight 20 Sachets"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+              autoFocus
+            />
+          </div>
+
+          {/* SKU + Código de barras */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">SKU <span className="text-gray-300 font-normal">(opcional)</span></label>
+              <input
+                type="text" value={form.sku}
+                onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
+                placeholder="300034"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Código de barras <span className="text-gray-300 font-normal">(opcional)</span></label>
+              <input
+                type="text" value={form.barcode}
+                onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))}
+                placeholder="8500942860946"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-300"
+              />
+            </div>
+          </div>
+
+          {/* Cantidad + Categoría */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Cantidad *</label>
+              <input
+                type="number" min={1} value={form.cantidad}
+                onChange={e => setForm(f => ({ ...f, cantidad: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">Categoría <span className="text-gray-300 font-normal">(opcional)</span></label>
+              <div className="relative">
+                <select
+                  value={form.categoria}
+                  onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}
+                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
+                >
+                  <option value="">Sin categoría</option>
+                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* Foto */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Foto <span className="text-gray-300 font-normal">(opcional · JPG o PNG · 5 MB máx)</span></label>
+            <input
+              ref={fileRef} type="file" className="hidden"
+              accept="image/jpeg,image/png" capture="environment"
+              onChange={e => e.target.files?.[0] && setForm(f => ({ ...f, imagen: e.target.files![0] }))}
+            />
+            {form.imagen ? (
+              <div className="flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-3">
+                <img src={URL.createObjectURL(form.imagen)} alt="" className="w-12 h-12 object-cover rounded-lg flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{form.imagen.name}</p>
+                  <p className="text-xs text-gray-400">{(form.imagen.size / 1024).toFixed(0)} KB</p>
+                </div>
+                <button onClick={() => setForm(f => ({ ...f, imagen: null }))} className="text-gray-400 hover:text-red-400 p-1">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/40 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Subir o tomar foto
+              </button>
+            )}
+          </div>
+
+          {/* Comentarios */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1.5">Comentarios <span className="text-gray-300 font-normal">(opcional)</span></label>
+            <textarea
+              value={form.comentarios}
+              onChange={e => setForm(f => ({ ...f, comentarios: e.target.value }))}
+              placeholder="Observaciones sobre el producto..."
+              rows={3}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
+            />
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
+          <button onClick={onCancel} className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm} disabled={!canConfirm}
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
+              canConfirm ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            Añadir producto
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ConteoORPage() {
   const params   = useParams();
+  const router   = useRouter();
   const rawId    = Array.isArray(params.id) ? params.id[0] : (params.id ?? "");
   const id       = decodeURIComponent(rawId);
   const baseData = MOCK_ORDENES[id] ?? getFallbackOrden(id);
@@ -397,10 +856,12 @@ export default function ConteoORPage() {
   const [sesionActiva,  setSesionActiva]  = useState(false);
   const [sesionInicio,  setSesionInicio]  = useState("");
   const [scanner,       setScanner]       = useState("");
-  const [confirmClose,  setConfirmClose]  = useState(false);
-  const [pendingRemove, setPendingRemove] = useState<string | null>(null);   // product id pending delete
-  const [showDotsMenu,  setShowDotsMenu]  = useState(false);
-  const [orEstado,      setOrEstado]      = useState<OrOutcome | null>(null); // null = en proceso
+  const [confirmClose,   setConfirmClose]   = useState(false);
+  const [pendingRemove,  setPendingRemove]  = useState<string | null>(null);
+  const [showDotsMenu,   setShowDotsMenu]   = useState(false);
+  const [orEstado,       setOrEstado]       = useState<OrOutcome | null>(null);
+  const [showIncidencias, setShowIncidencias] = useState(false);
+  const [showAddProduct,  setShowAddProduct]  = useState(false);
 
   // Restore closed state from localStorage (e.g. after back-navigation)
   useEffect(() => {
@@ -508,18 +969,32 @@ export default function ConteoORPage() {
 
   // Terminar recepción button styles
   const orCerrada        = orEstado !== null;
-  const terminarDisabled = sesionActiva || orCerrada;
+  const terminarDisabled = sesionActiva || orCerrada || sesiones.length === 0;
   const terminarClass = terminarDisabled
     ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
-    : sesiones.length > 0
-    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
-    : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200";
+    : "bg-red-50 border-red-200 text-red-600 hover:bg-red-100";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Modals ── */}
+      {showIncidencias && (
+        <IncidenciasModal
+          products={products}
+          onCancel={() => setShowIncidencias(false)}
+          onSkip={() => { setShowIncidencias(false); setConfirmClose(true); }}
+          onConfirm={() => { setShowIncidencias(false); setConfirmClose(true); }}
+        />
+      )}
+
+      {showAddProduct && (
+        <AddProductModal
+          onCancel={() => setShowAddProduct(false)}
+          onConfirm={(product) => { setProducts(ps => [...ps, product]); setShowAddProduct(false); }}
+        />
+      )}
+
       {confirmClose && (
         <ConfirmCloseModal
           id={id} sesiones={sesiones}
@@ -528,8 +1003,17 @@ export default function ConteoORPage() {
           onCancel={() => setConfirmClose(false)}
           onConfirm={(outcome) => {
             setOrEstado(outcome);
-            try { localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome })); } catch { /* ignore */ }
+            try {
+              localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome }));
+              localStorage.setItem("amplifica_pending_toast", JSON.stringify({
+                title: outcome === "Completado sin diferencias"
+                  ? "Recepción completada sin diferencias"
+                  : "Recepción completada con diferencias",
+                subtitle: `${id} fue cerrada correctamente`,
+              }));
+            } catch { /* ignore */ }
             setConfirmClose(false);
+            router.push("/recepciones");
           }}
         />
       )}
@@ -576,7 +1060,7 @@ export default function ConteoORPage() {
                 <MoreHorizontal className="w-5 h-5" />
               </button>
 
-              {showDotsMenu && (
+              {showDotsMenu && !orCerrada && (
                 <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-48">
                   <button
                     onClick={liberarSesion}
@@ -591,9 +1075,12 @@ export default function ConteoORPage() {
 
             {/* ── Terminar recepción ── */}
             <button
-              onClick={() => !terminarDisabled && setConfirmClose(true)}
+              onClick={() => !terminarDisabled && setShowIncidencias(true)}
               disabled={terminarDisabled}
-              title={terminarDisabled ? "Finaliza la sesión activa antes de terminar la recepción" : undefined}
+              title={
+                sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
+                sesionActiva ? "Finaliza la sesión activa antes de terminar" : undefined
+              }
               className={`flex items-center gap-2 px-4 py-2 border text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${terminarClass}`}
             >
               <ClipboardCheck className="w-4 h-4" />
@@ -775,7 +1262,7 @@ export default function ConteoORPage() {
 
           {/* Añadir producto */}
           <div className="border-t border-dashed border-gray-200">
-            <button className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors font-medium">
+            <button onClick={() => setShowAddProduct(true)} className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors font-medium">
               <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
                 <Plus className="w-3 h-3" />
               </span>

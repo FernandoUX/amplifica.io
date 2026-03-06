@@ -574,6 +574,17 @@ function OrdenesPageInner() {
       } catch { /* ignore */ }
     }
     setOrStatusOverrides(overrides);
+
+    // Show pending toast written by [id]/page.tsx after OR closure + redirect
+    try {
+      const pending = localStorage.getItem("amplifica_pending_toast");
+      if (pending) {
+        const { title, subtitle } = JSON.parse(pending) as { title: string; subtitle: string };
+        localStorage.removeItem("amplifica_pending_toast");
+        setToastMsg({ title, subtitle });
+        setShowToast(true);
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // ── Filter state ──
