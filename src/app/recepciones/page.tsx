@@ -560,10 +560,13 @@ function OrdenesPageInner() {
   const [search,            setSearch]            = useState("");
   const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, Status>>({});
   const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
+  const [createdOrs,        setCreatedOrs]        = useState<Orden[]>([]);
 
-  // Read per-OR status overrides from localStorage (written by [id]/page.tsx on close)
+  // Read per-OR status overrides + created ORs from localStorage
   useEffect(() => {
     const overrides: Record<string, Status> = {};
+
+    // Overrides for static mock ORs
     for (const orden of ORDENES) {
       try {
         const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
@@ -573,6 +576,26 @@ function OrdenesPageInner() {
         }
       } catch { /* ignore */ }
     }
+
+    // Read ORs created via /recepciones/crear
+    try {
+      const raw = localStorage.getItem("amplifica_created_ors");
+      if (raw) {
+        const parsed = JSON.parse(raw) as Orden[];
+        // Also apply any state-override saved for these ORs
+        for (const or of parsed) {
+          try {
+            const stored = localStorage.getItem(`amplifica_or_${or.id}`);
+            if (stored) {
+              const { estado } = JSON.parse(stored) as { estado: Status };
+              if (estado) overrides[or.id] = estado;
+            }
+          } catch { /* ignore */ }
+        }
+        setCreatedOrs(parsed);
+      }
+    } catch { /* ignore */ }
+
     setOrStatusOverrides(overrides);
 
     // Show pending toast written by [id]/page.tsx after OR closure + redirect
@@ -592,10 +615,10 @@ function OrdenesPageInner() {
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
 
-  // Apply localStorage overrides to the base data
+  // Merge created ORs with static data and apply localStorage overrides
   const ordenesEffective = useMemo(() =>
-    ORDENES.map(o => orStatusOverrides[o.id] ? { ...o, estado: orStatusOverrides[o.id] } : o),
-    [orStatusOverrides]
+    [...createdOrs, ...ORDENES].map(o => orStatusOverrides[o.id] ? { ...o, estado: orStatusOverrides[o.id] } : o),
+    [orStatusOverrides, createdOrs]
   );
 
   // ── Filter options (unique values from data) ──

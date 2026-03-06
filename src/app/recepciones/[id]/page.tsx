@@ -134,21 +134,26 @@ const INCIDENCIA_TAGS: {
 ];
 
 // ─── Categorizar button (per-SKU, opens IncidenciasSKUModal) ─────────────────
-function CategorizarBtn({ incidencias, onOpen }: {
+function CategorizarBtn({ incidencias, onOpen, disabled }: {
   incidencias: IncidenciaRow[];
   onOpen: () => void;
+  disabled?: boolean;
 }) {
   const count = incidencias.length;
   return (
     <button
-      onClick={onOpen}
+      onClick={disabled ? undefined : onOpen}
+      disabled={disabled}
+      title={disabled ? "Inicia una sesión de conteo para registrar incidencias" : undefined}
       className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-        count > 0
+        disabled
+          ? "border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed"
+          : count > 0
           ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
           : "border-gray-200 text-gray-600 hover:bg-gray-50"
       }`}
     >
-      {count > 0 && (
+      {count > 0 && !disabled && (
         <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
           {count}
         </span>
@@ -344,7 +349,7 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
 
             {/* Categorizar */}
             <div className="ml-auto">
-              <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} />
+              <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} disabled={!sesionActiva} />
             </div>
           </div>
 

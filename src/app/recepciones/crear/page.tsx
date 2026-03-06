@@ -554,6 +554,50 @@ function Step3({ form, setForm }: { form: FormData; setForm: React.Dispatch<Reac
   );
 }
 
+// ─── Persist new OR to localStorage ──────────────────────────────────────────
+function persistNewOr(form: FormData, sinAgenda: boolean) {
+  try {
+    const counter = parseInt(localStorage.getItem("amplifica_or_counter") ?? "192") + 1;
+    localStorage.setItem("amplifica_or_counter", String(counter));
+    const id = `RO-BARRA-${counter}`;
+
+    // Status: "Programado" if calendar date was set; "Creado" otherwise
+    const estado = (!sinAgenda && form.fechaReserva) ? "Programado" : "Creado";
+
+    // Today as DD/MM/YYYY
+    const now  = new Date();
+    const dd   = String(now.getDate()).padStart(2, "0");
+    const mm   = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    const creacion = `${dd}/${mm}/${yyyy}`;
+
+    // Fecha agendada formatted as DD/MM/YYYY HH:MM
+    let fechaAgendada = "—";
+    if (!sinAgenda && form.fechaReserva && form.horaReserva) {
+      const [fy, fm, fd] = form.fechaReserva.split("-");
+      fechaAgendada = `${fd}/${fm}/${fy} ${form.horaReserva}`;
+    }
+
+    const newOr = {
+      id,
+      creacion,
+      fechaAgendada,
+      seller: form.tienda,
+      sucursal: form.sucursal,
+      estado,
+      skus: form.products.length,
+      uTotales: String(form.products.reduce((s, p) => s + p.qty, 0)),
+      ...(form.pallets   ? { pallets:    parseInt(form.pallets) }   : {}),
+      ...(form.bultos    ? { bultos:     parseInt(form.bultos) }    : {}),
+      ...(form.comentarios ? { comentarios: form.comentarios }      : {}),
+    };
+
+    const existing: unknown[] = JSON.parse(localStorage.getItem("amplifica_created_ors") ?? "[]");
+    existing.unshift(newOr); // newest first
+    localStorage.setItem("amplifica_created_ors", JSON.stringify(existing));
+  } catch { /* ignore */ }
+}
+
 // ─── Steps config ─────────────────────────────────────────────────────────────
 const STEPS_FULL      = [
   { number: 1, label: "Definición de Destino" },
@@ -591,6 +635,7 @@ function CrearORPageInner() {
   };
 
   const handleSubmit = () => {
+    if (!isReagendar) persistNewOr(form, false);
     router.push(isReagendar ? "/recepciones?rescheduled=1" : "/recepciones?created=1");
   };
 
@@ -602,7 +647,9 @@ function CrearORPageInner() {
     const dd   = String(now.getDate()).padStart(2, "0");
     const hh   = String(now.getHours()).padStart(2, "0");
     const min  = String(now.getMinutes()).padStart(2, "0");
-    setForm(f => ({ ...f, fechaReserva: `${yyyy}-${mm}-${dd}`, horaReserva: `${hh}:${min}` }));
+    const updatedForm = { ...form, fechaReserva: `${yyyy}-${mm}-${dd}`, horaReserva: `${hh}:${min}` };
+    setForm(() => updatedForm);
+    persistNewOr(updatedForm, true);
     router.push("/recepciones?created=1");
   };
 
