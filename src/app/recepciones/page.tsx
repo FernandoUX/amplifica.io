@@ -8,7 +8,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
   Download01, Sliders01, LayoutGrid01, SearchLg,
   DotsVertical, CheckCircle, AlertTriangle, XCircle, ClockRefresh, InfoCircle, X,
-  SwitchVertical01, ArrowUp, ArrowDown, Plus,
+  SwitchVertical01, ArrowUp, ArrowDown, Plus, ChevronDown,
   CalendarPlus01, PackageCheck, Play, ClipboardCheck, FastForward,
   Eye, Edit01, SlashCircle01, LockUnlocked01,
 } from "@untitled-ui/icons-react";
@@ -241,150 +241,141 @@ function RecebirModal({ orden, onCancel, onConfirm }: {
 }) {
   const [palletsRecibidos, setPalletsRecibidos] = useState<string>("");
   const [bultosRecibidos,  setBultosRecibidos]  = useState<string>("");
+  const [comentarios,      setComentarios]      = useState<string>("");
 
   const declaredPallets = orden.pallets ?? 0;
   const declaredBultos  = orden.bultos  ?? 0;
+  const hasValues       = palletsRecibidos !== "" && bultosRecibidos !== "";
+  const parsedPallets   = parseInt(palletsRecibidos) || 0;
+  const parsedBultos    = parseInt(bultosRecibidos)  || 0;
+  const palletsMatch    = palletsRecibidos !== "" && parsedPallets === declaredPallets;
+  const bultosMatch     = bultosRecibidos  !== "" && parsedBultos  === declaredBultos;
+  const hasDiff         = hasValues && (!palletsMatch || !bultosMatch);
 
-  const parsedPallets = parseInt(palletsRecibidos) || 0;
-  const parsedBultos  = parseInt(bultosRecibidos)  || 0;
-
-  const palletsEntered = palletsRecibidos.trim() !== "";
-  const bultosEntered  = bultosRecibidos.trim()  !== "";
-  const hasValues      = palletsEntered && bultosEntered;
-
-  const palletsMatch = palletsEntered && parsedPallets === declaredPallets;
-  const bultosMatch  = bultosEntered  && parsedBultos  === declaredBultos;
-  const palletsDiff  = parsedPallets - declaredPallets;
-  const bultosDiff   = parsedBultos  - declaredBultos;
-  const allMatch     = hasValues && palletsMatch && bultosMatch;
-  const hasDiff      = hasValues && (!palletsMatch || !bultosMatch);
+  const maxPallets = Math.max(50, declaredPallets * 2);
+  const maxBultos  = Math.max(500, declaredBultos  * 2);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl">
 
-        {/* Close */}
-        <div className="flex justify-end mb-2">
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4">
+          <h3 className="text-xl font-bold text-gray-900">
+            Recibir Orden <span className="font-mono">#{orden.id}</span>
+          </h3>
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Icon */}
-        <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
-          <PackageCheck className="w-7 h-7 text-indigo-600" />
-        </div>
+        {/* Body */}
+        <div className="px-6 pb-2 space-y-4">
+          <p className="text-sm font-semibold text-gray-800">Detalles de la recepción:</p>
 
-        {/* Title */}
-        <h3 className="text-lg font-bold text-gray-900 mb-1">Recibir orden</h3>
-        <p className="text-sm text-gray-500 mb-5">Verifica la cantidad de pallets y bultos recibidos antes de iniciar el conteo</p>
+          {/* Info card */}
+          <div className="border border-gray-200 rounded-xl px-4 py-3.5 flex items-start divide-x divide-gray-100">
+            <div className="pr-5 min-w-0">
+              <p className="text-xs text-gray-400 mb-1">Seller</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{orden.seller}</p>
+            </div>
+            <div className="px-5">
+              <p className="text-xs text-gray-400 mb-1">Estado</p>
+              <StatusBadge status={orden.estado} />
+            </div>
+            <div className="px-5 flex-1">
+              <p className="text-xs text-gray-400 mb-1">Fecha programada</p>
+              <p className="text-sm font-semibold text-gray-700 whitespace-nowrap">{orden.fechaAgendada}</p>
+            </div>
+            <div className="px-5">
+              <p className="text-xs text-gray-400 mb-1">Pallets</p>
+              <p className="text-sm font-bold text-gray-900">{declaredPallets}</p>
+            </div>
+            <div className="pl-5">
+              <p className="text-xs text-gray-400 mb-1">Bultos</p>
+              <p className="text-sm font-bold text-gray-900">{declaredBultos}</p>
+            </div>
+          </div>
 
-        {/* OR info pill */}
-        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-5 flex items-center justify-between">
+          {/* Textarea */}
           <div>
-            <p className="text-xs text-gray-400 font-medium mb-0.5">Orden</p>
-            <p className="text-sm font-bold text-gray-900 font-mono tracking-tight">{orden.id}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400 font-medium mb-0.5">Seller</p>
-            <p className="text-sm font-semibold text-gray-700">{orden.seller}</p>
-          </div>
-        </div>
-
-        {/* Pallets input */}
-        <div className="space-y-4 mb-6">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-semibold text-gray-700">Pallets</span>
-              <span className="text-xs text-gray-400">
-                Declarados: <span className="font-semibold text-gray-600">{declaredPallets}</span>
-              </span>
-            </div>
-            <div className="relative">
-              <input
-                type="number" min={0}
-                value={palletsRecibidos}
-                onChange={e => setPalletsRecibidos(e.target.value)}
-                placeholder="Ingresa los pallets recibidos"
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors pr-28 ${
-                  !palletsEntered ? "border-gray-200 focus:ring-indigo-300" :
-                  palletsMatch    ? "border-green-300 bg-green-50/60 focus:ring-green-200" :
-                                    "border-orange-300 bg-orange-50/60 focus:ring-orange-200"
-                }`}
-              />
-              {palletsEntered && (
-                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold pointer-events-none ${
-                  palletsMatch ? "text-green-600" : "text-orange-500"
-                }`}>
-                  {palletsMatch ? "✓ Coincide" : palletsDiff > 0 ? `+${palletsDiff}` : String(palletsDiff)}
-                </span>
-              )}
-            </div>
+            <label className="block text-xs text-gray-400 font-medium mb-1.5">
+              Comentarios adicionales (opcional)
+            </label>
+            <textarea
+              value={comentarios}
+              onChange={e => setComentarios(e.target.value)}
+              placeholder="Llegará en un camión blanco patente XXNN33"
+              rows={3}
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+            />
           </div>
 
-          {/* Bultos input */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-semibold text-gray-700">Bultos</span>
-              <span className="text-xs text-gray-400">
-                Declarados: <span className="font-semibold text-gray-600">{declaredBultos}</span>
-              </span>
+          {/* Dropdowns */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 font-medium mb-1.5">Cantidad de pallets</label>
+              <div className="relative">
+                <select
+                  value={palletsRecibidos}
+                  onChange={e => setPalletsRecibidos(e.target.value)}
+                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
+                >
+                  <option value="">Seleccione</option>
+                  {Array.from({ length: maxPallets + 1 }, (_, i) => (
+                    <option key={i} value={String(i)}>{i}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
-            <div className="relative">
-              <input
-                type="number" min={0}
-                value={bultosRecibidos}
-                onChange={e => setBultosRecibidos(e.target.value)}
-                placeholder="Ingresa los bultos recibidos"
-                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors pr-28 ${
-                  !bultosEntered ? "border-gray-200 focus:ring-indigo-300" :
-                  bultosMatch    ? "border-green-300 bg-green-50/60 focus:ring-green-200" :
-                                   "border-orange-300 bg-orange-50/60 focus:ring-orange-200"
-                }`}
-              />
-              {bultosEntered && (
-                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold pointer-events-none ${
-                  bultosMatch ? "text-green-600" : "text-orange-500"
-                }`}>
-                  {bultosMatch ? "✓ Coincide" : bultosDiff > 0 ? `+${bultosDiff}` : String(bultosDiff)}
-                </span>
-              )}
+            <div>
+              <label className="block text-xs text-gray-500 font-medium mb-1.5">Cantidad de bultos</label>
+              <div className="relative">
+                <select
+                  value={bultosRecibidos}
+                  onChange={e => setBultosRecibidos(e.target.value)}
+                  className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white pr-9"
+                >
+                  <option value="">Seleccione</option>
+                  {Array.from({ length: maxBultos + 1 }, (_, i) => (
+                    <option key={i} value={String(i)}>{i}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
 
-          {/* Status feedback */}
+          {/* Mismatch warning */}
           {hasDiff && (
             <div className="flex items-start gap-2.5 px-3 py-2.5 bg-orange-50 border border-orange-200 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-orange-700 leading-relaxed">
+              <p className="text-sm text-orange-700">
                 Hay diferencias entre lo declarado y lo recibido. Puedes continuar de todas formas.
               </p>
             </div>
           )}
-          {allMatch && (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-              <p className="text-xs text-green-700">Los pallets y bultos coinciden con lo declarado.</p>
-            </div>
-          )}
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3">
-          <button onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
-            Cancelar
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 mt-2 border-t border-gray-100">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+          >
+            Cerrar
           </button>
           <button
             onClick={onConfirm}
             disabled={!hasValues}
-            className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+            className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
               hasValues
                 ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >
-            <PackageCheck className="w-4 h-4" />
+            <CheckCircle className="w-4 h-4" />
             Confirmar recepción
           </button>
         </div>
