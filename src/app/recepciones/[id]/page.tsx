@@ -116,9 +116,6 @@ function fmtDT(iso: string) {
 
 function sesionId(n: number) { return `SES-${String(n).padStart(3, "0")}`; }
 
-// ─── Categorizar dropdown ─────────────────────────────────────────────────────
-const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso"];
-
 // ─── Incidencia tags ──────────────────────────────────────────────────────────
 const INCIDENCIA_TAGS: {
   key: IncidenciaTagKey;
@@ -136,38 +133,28 @@ const INCIDENCIA_TAGS: {
   { key: "no-en-sistema",     label: "No creado en sistema",       color: "purple", resuelve: "Amplifica — creación de SKU" },
 ];
 
-function CategorizarBtn() {
-  const [open, setOpen] = useState(false);
-  const [sel,  setSel]  = useState<string | null>(null);
-  const ref             = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function oc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", oc);
-    return () => document.removeEventListener("mousedown", oc);
-  }, []);
-
+// ─── Categorizar button (per-SKU, opens IncidenciasSKUModal) ─────────────────
+function CategorizarBtn({ incidencias, onOpen }: {
+  incidencias: IncidenciaRow[];
+  onOpen: () => void;
+}) {
+  const count = incidencias.length;
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium whitespace-nowrap"
-      >
-        {sel ?? "Categorizar"}
-        <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
-          {CATEGORIAS.map(c => (
-            <button key={c} onClick={() => { setSel(c); setOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${sel === c ? "text-indigo-600 font-medium" : "text-gray-700"}`}
-            >{c}</button>
-          ))}
-        </div>
+    <button
+      onClick={onOpen}
+      className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+        count > 0
+          ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+      }`}
+    >
+      {count > 0 && (
+        <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          {count}
+        </span>
       )}
-    </div>
+      Categorizar
+    </button>
   );
 }
 
@@ -269,12 +256,14 @@ function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCanc
 }
 
 // ─── ProductCard ──────────────────────────────────────────────────────────────
-function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove }: {
+function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, incidencias, onCategorizar }: {
   product: ProductConteo;
   acumulado: number;
   sesionActiva: boolean;
   onChange: (id: string, val: number) => void;
   onRemove: (id: string) => void;
+  incidencias: IncidenciaRow[];
+  onCategorizar: () => void;
 }) {
   const total  = acumulado + product.contadasSesion;
   const status = getProductStatus(total, product.esperadas);
@@ -354,7 +343,7 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove }: {
 
             {/* Categorizar */}
             <div className="ml-auto">
-              <CategorizarBtn />
+              <CategorizarBtn incidencias={incidencias} onOpen={onCategorizar} />
             </div>
           </div>
 
@@ -559,17 +548,21 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
   );
 }
 
-// ─── IncidenciasModal ─────────────────────────────────────────────────────────
-function IncidenciasModal({ products, onCancel, onSkip, onConfirm }: {
-  products: ProductConteo[];
-  onCancel: () => void;
-  onSkip: () => void;
-  onConfirm: (rows: IncidenciaRow[]) => void;
+// ─── IncidenciasSKUModal — per-SKU incidencias form ───────────────────────────
+function IncidenciasSKUModal({ product, initialRows, onClose, onSave }: {
+  product: ProductConteo;
+  initialRows: IncidenciaRow[];
+  onClose: () => void;
+  onSave: (rows: IncidenciaRow[]) => void;
 }) {
-  const [rows, setRows] = useState<IncidenciaRow[]>([]);
+  const [rows, setRows] = useState<IncidenciaRow[]>(initialRows);
 
-  const addRow = (skuId: string) =>
-    setRows(prev => [...prev, { rowId: Math.random().toString(36).slice(2), skuId, tag: "", cantidad: 1, imagenes: [], nota: "", descripcion: "" }]);
+  const addRow = () =>
+    setRows(prev => [...prev, {
+      rowId: Math.random().toString(36).slice(2),
+      skuId: product.id,
+      tag: "", cantidad: 1, imagenes: [], nota: "", descripcion: "",
+    }]);
 
   const updateRow = (rowId: string, update: Partial<IncidenciaRow>) =>
     setRows(prev => prev.map(r => r.rowId === rowId ? { ...r, ...update } : r));
@@ -592,82 +585,90 @@ function IncidenciasModal({ products, onCancel, onSkip, onConfirm }: {
     updateRow(rowId, { imagenes: row.imagenes.filter((_, i) => i !== idx) });
   };
 
-  const canContinue = rows.length === 0 || rows.every(r =>
+  const saveEnabled = rows.length === 0 || rows.every(r =>
     r.tag !== "" && r.cantidad >= 1 && r.imagenes.length >= 1 &&
     (r.tag !== "no-en-sistema" || r.descripcion.trim() !== "")
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[85vh] flex flex-col">
 
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Registrar incidencias</h3>
-            <p className="text-sm text-gray-400 mt-0.5">Categoriza los SKUs con problemas antes de cerrar la OR</p>
+        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            {product.imagen
+              ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
+              : <ImageOff className="w-5 h-5 text-gray-300" />}
           </div>
-          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors ml-4 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">{product.nombre}</p>
+            <p className="text-xs text-gray-400 mt-0.5">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {products.map(product => {
-            const productRows = rows.filter(r => r.skuId === product.id);
-            return (
-              <div key={product.id} className="border border-gray-200 rounded-xl overflow-hidden">
-                {/* Product header */}
-                <div className="flex items-center gap-3 px-4 py-3 bg-white">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    {product.imagen
-                      ? <img src={product.imagen} alt="" className="w-full h-full object-cover rounded-lg" />
-                      : <ImageOff className="w-5 h-5 text-gray-300" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{product.nombre}</p>
-                    <p className="text-xs text-gray-400">SKU: {product.sku} · {product.esperadas} uds declaradas</p>
-                  </div>
-                  <button
-                    onClick={() => addRow(product.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex-shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Agregar incidencia
-                  </button>
-                </div>
-                {/* Incidencia rows for this product */}
-                {productRows.map((row, idx) => (
-                  <IncidenciaRowCard
-                    key={row.rowId}
-                    row={row} index={idx} product={product}
-                    onUpdate={updateRow} onRemove={removeRow}
-                    onAddImages={addImages} onRemoveImage={removeImage}
-                  />
-                ))}
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto">
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-10 px-6 text-center">
+              <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                <ClipboardCheck className="w-6 h-6 text-gray-300" />
               </div>
-            );
-          })}
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Sin incidencias registradas</p>
+                <p className="text-xs text-gray-400 mt-0.5">Agrega una incidencia si este SKU presenta algún problema.</p>
+              </div>
+              <button
+                onClick={addRow}
+                className="flex items-center gap-1.5 px-4 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors mt-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Agregar incidencia
+              </button>
+            </div>
+          ) : (
+            <div>
+              {rows.map((row, idx) => (
+                <IncidenciaRowCard
+                  key={row.rowId}
+                  row={row} index={idx} product={product}
+                  onUpdate={updateRow} onRemove={removeRow}
+                  onAddImages={addImages} onRemoveImage={removeImage}
+                />
+              ))}
+              <div className="px-4 py-3 border-t border-dashed border-gray-200">
+                <button
+                  onClick={addRow}
+                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors px-2 py-1.5 rounded-lg"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Agregar otra incidencia
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 flex-shrink-0">
           <button
-            onClick={onSkip}
+            onClick={onClose}
             className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
           >
-            Sin incidencias
+            Cancelar
           </button>
           <button
-            onClick={() => onConfirm(rows)}
-            disabled={!canContinue}
+            onClick={() => saveEnabled && onSave(rows)}
+            disabled={!saveEnabled}
             className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
-              canContinue ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              saveEnabled ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >
-            <ClipboardCheck className="w-4 h-4" />
-            Continuar
+            <Check className="w-4 h-4" />
+            Guardar
           </button>
         </div>
 
@@ -677,6 +678,8 @@ function IncidenciasModal({ products, onCancel, onSkip, onConfirm }: {
 }
 
 // ─── AddProductModal ──────────────────────────────────────────────────────────
+const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso"];
+
 function AddProductModal({ onCancel, onConfirm }: {
   onCancel: () => void;
   onConfirm: (product: ProductConteo) => void;
@@ -860,8 +863,9 @@ export default function ConteoORPage() {
   const [pendingRemove,  setPendingRemove]  = useState<string | null>(null);
   const [showDotsMenu,   setShowDotsMenu]   = useState(false);
   const [orEstado,       setOrEstado]       = useState<OrOutcome | null>(null);
-  const [showIncidencias, setShowIncidencias] = useState(false);
-  const [showAddProduct,  setShowAddProduct]  = useState(false);
+  const [incidencias,      setIncidencias]      = useState<Record<string, IncidenciaRow[]>>({});
+  const [incidenciaTarget, setIncidenciaTarget] = useState<string | null>(null);
+  const [showAddProduct,   setShowAddProduct]   = useState(false);
 
   // Restore closed state from localStorage (e.g. after back-navigation)
   useEffect(() => {
@@ -979,14 +983,20 @@ export default function ConteoORPage() {
     <div className="min-h-screen bg-gray-50">
 
       {/* ── Modals ── */}
-      {showIncidencias && (
-        <IncidenciasModal
-          products={products}
-          onCancel={() => setShowIncidencias(false)}
-          onSkip={() => { setShowIncidencias(false); setConfirmClose(true); }}
-          onConfirm={() => { setShowIncidencias(false); setConfirmClose(true); }}
-        />
-      )}
+      {incidenciaTarget !== null && (() => {
+        const prod = products.find(p => p.id === incidenciaTarget);
+        return prod ? (
+          <IncidenciasSKUModal
+            product={prod}
+            initialRows={incidencias[incidenciaTarget] ?? []}
+            onClose={() => setIncidenciaTarget(null)}
+            onSave={(rows) => {
+              setIncidencias(prev => ({ ...prev, [incidenciaTarget]: rows }));
+              setIncidenciaTarget(null);
+            }}
+          />
+        ) : null;
+      })()}
 
       {showAddProduct && (
         <AddProductModal
@@ -1075,7 +1085,7 @@ export default function ConteoORPage() {
 
             {/* ── Terminar recepción ── */}
             <button
-              onClick={() => !terminarDisabled && setShowIncidencias(true)}
+              onClick={() => !terminarDisabled && setConfirmClose(true)}
               disabled={terminarDisabled}
               title={
                 sesiones.length === 0 ? "Registra al menos una sesión antes de terminar" :
@@ -1256,6 +1266,8 @@ export default function ConteoORPage() {
                 sesionActiva={sesionActiva}
                 onChange={updateContadas}
                 onRemove={pid => setPendingRemove(pid)}
+                incidencias={incidencias[p.id] ?? []}
+                onCategorizar={() => setIncidenciaTarget(p.id)}
               />
             ))
           )}
