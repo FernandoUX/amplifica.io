@@ -35,6 +35,8 @@ type Orden = {
   uTotales: string;
   tags?: ResultTag[];     // Feature 4: tags de resultado (Completada)
   isSubId?: boolean;      // Feature 2: sub-ID (RO-XXX-P1)
+  pallets?: number;       // Seller-declared pallets (for "Programado" ORs)
+  bultos?: number;        // Seller-declared bultos (for "Programado" ORs)
 };
 
 type SortField = "creacion" | "fechaAgendada" | null;
@@ -78,9 +80,9 @@ const ORDENES: Orden[] = [
   { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
 
   // Programado
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450" },
+  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 10, bultos: 32 },
+  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550", pallets: 8, bultos: 28 },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450", pallets: 3, bultos: 15 },
 
   // Recepcionado en bodega
   { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
@@ -231,8 +233,169 @@ function getActions(estado: Status, id: string): ActionConfig {
   }
 }
 
+// ─── Recibir Modal ────────────────────────────────────────────────────────────
+function RecebirModal({ orden, onCancel, onConfirm }: {
+  orden: Orden;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const [palletsRecibidos, setPalletsRecibidos] = useState<string>("");
+  const [bultosRecibidos,  setBultosRecibidos]  = useState<string>("");
+
+  const declaredPallets = orden.pallets ?? 0;
+  const declaredBultos  = orden.bultos  ?? 0;
+
+  const parsedPallets = parseInt(palletsRecibidos) || 0;
+  const parsedBultos  = parseInt(bultosRecibidos)  || 0;
+
+  const palletsEntered = palletsRecibidos.trim() !== "";
+  const bultosEntered  = bultosRecibidos.trim()  !== "";
+  const hasValues      = palletsEntered && bultosEntered;
+
+  const palletsMatch = palletsEntered && parsedPallets === declaredPallets;
+  const bultosMatch  = bultosEntered  && parsedBultos  === declaredBultos;
+  const palletsDiff  = parsedPallets - declaredPallets;
+  const bultosDiff   = parsedBultos  - declaredBultos;
+  const allMatch     = hasValues && palletsMatch && bultosMatch;
+  const hasDiff      = hasValues && (!palletsMatch || !bultosMatch);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+
+        {/* Close */}
+        <div className="flex justify-end mb-2">
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Icon */}
+        <div className="w-14 h-14 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
+          <PackageCheck className="w-7 h-7 text-indigo-600" />
+        </div>
+
+        {/* Title */}
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Recibir orden</h3>
+        <p className="text-sm text-gray-500 mb-5">Verifica la cantidad de pallets y bultos recibidos antes de iniciar el conteo</p>
+
+        {/* OR info pill */}
+        <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 mb-5 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-400 font-medium mb-0.5">Orden</p>
+            <p className="text-sm font-bold text-gray-900 font-mono tracking-tight">{orden.id}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-400 font-medium mb-0.5">Seller</p>
+            <p className="text-sm font-semibold text-gray-700">{orden.seller}</p>
+          </div>
+        </div>
+
+        {/* Pallets input */}
+        <div className="space-y-4 mb-6">
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-semibold text-gray-700">Pallets</span>
+              <span className="text-xs text-gray-400">
+                Declarados: <span className="font-semibold text-gray-600">{declaredPallets}</span>
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="number" min={0}
+                value={palletsRecibidos}
+                onChange={e => setPalletsRecibidos(e.target.value)}
+                placeholder="Ingresa los pallets recibidos"
+                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors pr-28 ${
+                  !palletsEntered ? "border-gray-200 focus:ring-indigo-300" :
+                  palletsMatch    ? "border-green-300 bg-green-50/60 focus:ring-green-200" :
+                                    "border-orange-300 bg-orange-50/60 focus:ring-orange-200"
+                }`}
+              />
+              {palletsEntered && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold pointer-events-none ${
+                  palletsMatch ? "text-green-600" : "text-orange-500"
+                }`}>
+                  {palletsMatch ? "✓ Coincide" : palletsDiff > 0 ? `+${palletsDiff}` : String(palletsDiff)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Bultos input */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-semibold text-gray-700">Bultos</span>
+              <span className="text-xs text-gray-400">
+                Declarados: <span className="font-semibold text-gray-600">{declaredBultos}</span>
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="number" min={0}
+                value={bultosRecibidos}
+                onChange={e => setBultosRecibidos(e.target.value)}
+                placeholder="Ingresa los bultos recibidos"
+                className={`w-full px-3 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-colors pr-28 ${
+                  !bultosEntered ? "border-gray-200 focus:ring-indigo-300" :
+                  bultosMatch    ? "border-green-300 bg-green-50/60 focus:ring-green-200" :
+                                   "border-orange-300 bg-orange-50/60 focus:ring-orange-200"
+                }`}
+              />
+              {bultosEntered && (
+                <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold pointer-events-none ${
+                  bultosMatch ? "text-green-600" : "text-orange-500"
+                }`}>
+                  {bultosMatch ? "✓ Coincide" : bultosDiff > 0 ? `+${bultosDiff}` : String(bultosDiff)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Status feedback */}
+          {hasDiff && (
+            <div className="flex items-start gap-2.5 px-3 py-2.5 bg-orange-50 border border-orange-200 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-orange-700 leading-relaxed">
+                Hay diferencias entre lo declarado y lo recibido. Puedes continuar de todas formas.
+              </p>
+            </div>
+          )}
+          {allMatch && (
+            <div className="flex items-center gap-2.5 px-3 py-2.5 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <p className="text-xs text-green-700">Los pallets y bultos coinciden con lo declarado.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!hasValues}
+            className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+              hasValues
+                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            <PackageCheck className="w-4 h-4" />
+            Confirmar recepción
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ─── Actions cell ─────────────────────────────────────────────────────────────
-function ActionsCell({ orden }: { orden: Orden }) {
+function ActionsCell({ orden, onPrimaryAction }: { orden: Orden; onPrimaryAction?: () => void }) {
   const router        = useRouter();
   const [menuPos,    setMenuPos]    = useState<{ top: number; right: number } | null>(null);
   const [tipVisible, setTipVisible] = useState(false);
@@ -283,7 +446,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
               <Icon className="w-4 h-4" />
             </Link>
           ) : (
-            <button className={btnCls}>
+            <button className={btnCls} onClick={onPrimaryAction}>
               <Icon className="w-4 h-4" />
             </button>
           )}
@@ -407,6 +570,7 @@ function OrdenesPageInner() {
   const [showFilters,       setShowFilters]       = useState(false);
   const [search,            setSearch]            = useState("");
   const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, Status>>({});
+  const [recibirOrden,      setRecibirOrden]      = useState<Orden | null>(null);
 
   // Read per-OR status overrides from localStorage (written by [id]/page.tsx on close)
   useEffect(() => {
@@ -579,6 +743,28 @@ function OrdenesPageInner() {
             </ul>
           </div>
         </div>
+      )}
+
+      {/* ── Recibir OR modal ── */}
+      {recibirOrden && (
+        <RecebirModal
+          orden={recibirOrden}
+          onCancel={() => setRecibirOrden(null)}
+          onConfirm={() => {
+            const targetId = recibirOrden.id;
+            const newStatus: Status = "Recepcionado en bodega";
+            try {
+              localStorage.setItem(`amplifica_or_${targetId}`, JSON.stringify({ estado: newStatus }));
+            } catch { /* ignore */ }
+            setOrStatusOverrides(prev => ({ ...prev, [targetId]: newStatus }));
+            setRecibirOrden(null);
+            setToastMsg({
+              title: "Orden recepcionada en bodega",
+              subtitle: `${targetId} fue recibida y está lista para el conteo`,
+            });
+            setShowToast(true);
+          }}
+        />
       )}
 
       {/* ── Filter modal ── */}
@@ -980,7 +1166,10 @@ function OrdenesPageInner() {
                       className="py-3 px-4 bg-white group-hover:bg-gray-50/60"
                       style={{ ...NW, ...stickyRight }}
                     >
-                      <ActionsCell orden={orden} />
+                      <ActionsCell
+                        orden={orden}
+                        onPrimaryAction={orden.estado === "Programado" ? () => setRecibirOrden(orden) : undefined}
+                      />
                     </td>
                   </tr>
                 ))
