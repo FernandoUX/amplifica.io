@@ -362,7 +362,10 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
 }
 
 // ─── Session history row ──────────────────────────────────────────────────────
-function SesionRow({ sesion }: { sesion: Sesion }) {
+function SesionRow({ sesion, incidencias }: {
+  sesion: Sesion;
+  incidencias: Record<string, IncidenciaRow[]>;
+}) {
   const [open, setOpen] = useState(false);
   const totalUds = sesion.items.reduce((s, i) => s + i.cantidad, 0);
 
@@ -398,17 +401,44 @@ function SesionRow({ sesion }: { sesion: Sesion }) {
               <tr className="text-gray-400 border-b border-gray-100">
                 <th className="text-left py-2 font-semibold">SKU</th>
                 <th className="text-left py-2 font-semibold">Producto</th>
+                <th className="text-left py-2 font-semibold">Incidencias</th>
                 <th className="text-right py-2 font-semibold">Contadas</th>
               </tr>
             </thead>
             <tbody>
-              {sesion.items.map(item => (
-                <tr key={item.pid} className="border-b border-gray-50 last:border-0">
-                  <td className="py-2 font-mono text-gray-500 text-xs">{item.sku}</td>
-                  <td className="py-2 text-gray-700">{item.nombre}</td>
-                  <td className="py-2 text-right font-semibold text-gray-800 tabular-nums">{item.cantidad.toLocaleString("es-CL")}</td>
-                </tr>
-              ))}
+              {sesion.items.map(item => {
+                const rows = incidencias[item.pid] ?? [];
+                return (
+                  <tr key={item.pid} className="border-b border-gray-50 last:border-0">
+                    <td className="py-2 font-mono text-gray-500 text-xs align-top">{item.sku}</td>
+                    <td className="py-2 text-gray-700 align-top">{item.nombre}</td>
+                    <td className="py-2 align-top">
+                      {rows.length === 0 ? (
+                        <span className="text-xs text-gray-300">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {rows.map(r => {
+                            const tag = INCIDENCIA_TAGS.find(t => t.key === r.tag);
+                            if (!tag) return null;
+                            return (
+                              <span key={r.rowId} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                tag.color === "amber"  ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                                tag.color === "orange" ? "bg-orange-50 text-orange-700 border border-orange-200" :
+                                tag.color === "purple" ? "bg-purple-50 text-purple-700 border border-purple-200" :
+                                                         "bg-red-50 text-red-700 border border-red-200"
+                              }`}>
+                                {tag.label}
+                                <span className="opacity-60 font-normal">· {r.cantidad} uds</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 text-right font-semibold text-gray-800 tabular-nums align-top">{item.cantidad.toLocaleString("es-CL")}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1293,7 +1323,7 @@ export default function ConteoORPage() {
                 {totalAcumUds.toLocaleString("es-CL")} uds acumuladas
               </span>
             </div>
-            {sesiones.map(ses => <SesionRow key={ses.id} sesion={ses} />)}
+            {sesiones.map(ses => <SesionRow key={ses.id} sesion={ses} incidencias={incidencias} />)}
           </div>
         )}
 
