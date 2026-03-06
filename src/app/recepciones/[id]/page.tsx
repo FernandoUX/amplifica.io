@@ -265,7 +265,8 @@ function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove, inc
   incidencias: IncidenciaRow[];
   onCategorizar: () => void;
 }) {
-  const total  = acumulado + product.contadasSesion;
+  const incidenciasTotal = incidencias.reduce((s, r) => s + r.cantidad, 0);
+  const total  = acumulado + product.contadasSesion + incidenciasTotal;
   const status = getProductStatus(total, product.esperadas);
   const pct    = product.esperadas > 0 ? Math.min(100, (total / product.esperadas) * 100) : 0;
 
@@ -447,7 +448,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
             <select
               value={row.tag}
               onChange={e => onUpdate(row.rowId, { tag: e.target.value as IncidenciaTagKey | "" })}
-              className="w-full appearance-none px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
+              className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-300 pr-8"
             >
               <option value="">Seleccione</option>
               {INCIDENCIA_TAGS.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
@@ -461,7 +462,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
             type="number" min={1} max={product.esperadas}
             value={row.cantidad}
             onChange={e => onUpdate(row.rowId, { cantidad: Math.max(1, parseInt(e.target.value) || 1) })}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
           />
         </div>
       </div>
@@ -475,7 +476,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
             onChange={e => onUpdate(row.rowId, { descripcion: e.target.value })}
             placeholder="Nombre, código visible, descripción del producto no identificado..."
             rows={2}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
           />
         </div>
       )}
@@ -529,7 +530,7 @@ function IncidenciaRowCard({ row, index, product, onUpdate, onRemove, onAddImage
           onChange={e => onUpdate(row.rowId, { nota: e.target.value })}
           placeholder="Observaciones adicionales..."
           rows={2}
-          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none placeholder-gray-300"
         />
       </div>
 
