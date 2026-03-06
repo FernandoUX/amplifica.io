@@ -75,35 +75,35 @@ const TAG_FILTER_OPTIONS: {
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const ORDENES: Orden[] = [
   // Creado — sin fecha agendada aún
-  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
+  { id: "RO-BARRA-191", creacion: "01/03/2026", fechaAgendada: "—", seller: "Extra Life", sucursal: "Quilicura", estado: "Creado", skus: 5, uTotales: "100" },
 
   // Programado
-  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "100 Aventuras", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Naturela", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450" },
+  { id: "RO-BARRA-183", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Extra Life", sucursal: "Quilicura", estado: "Programado", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-182", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", fechaExtra: "Expirado hace 4 horas", seller: "Extra Life", sucursal: "La Reina", estado: "Programado", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-190", creacion: "17/02/2026", fechaAgendada: "21/02/2026 09:00", fechaExtra: "Expira en 28 minutos", seller: "Le Vice", sucursal: "Lo Barnechea", estado: "Programado", skus: 15, uTotales: "450" },
 
   // Recepcionado en bodega
-  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
+  { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
 
   // En proceso de conteo
-  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "SportZone", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
 
   // Feature 2 — Parcialmente recepcionada: padre + sub-IDs
-  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
+  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
     tags: makeTags({ sinDiferencias: 1150, conDiferencias: 50 }) },
-  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "SportZone", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
+  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
 
   // Cancelada
-  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "100 Aventuras", sucursal: "Santiago Centro", estado: "Cancelada", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelada", skus: 320, uTotales: "2.550" },
 
   // Feature 4 — Completadas con tags de resultado
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "100 Aventuras", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Naturela", sucursal: "La Reina", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ conDiferencias: 20, pendiente: true }) },
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Naturela", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
 ];
 
@@ -132,6 +132,7 @@ const TAB_STATUS: Record<string, Status | null> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const NW: React.CSSProperties = { whiteSpace: "nowrap" };
+
 
 function parseDate(str: string): number {
   if (str === "—") return 0;
@@ -178,7 +179,7 @@ type PrimaryAction = {
 };
 type ActionConfig = { primary?: PrimaryAction; menu: MenuItem[] };
 
-function getActions(estado: Status): ActionConfig {
+function getActions(estado: Status, id: string): ActionConfig {
   switch (estado) {
     case "Creado":
       return {
@@ -201,31 +202,31 @@ function getActions(estado: Status): ActionConfig {
       };
     case "Recepcionado en bodega":
       return {
-        primary: { tooltip: "Empezar", icon: Play },
+        primary: { tooltip: "Empezar conteo", icon: Play, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
-          { label: "Ver",      icon: Eye },
+          { label: "Ver",      icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
           { label: "Editar",   icon: Edit01 },
           { label: "Cancelar", icon: SlashCircle01, danger: true },
         ],
       };
     case "En proceso de conteo":
       return {
-        primary: { tooltip: "Resumir", icon: ClipboardCheck },
+        primary: { tooltip: "Resumir", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
-          { label: "Ver", icon: Eye },
+          { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
     case "Parcialmente recepcionada":
       return {
-        primary: { tooltip: "Continuar", icon: FastForward },
+        primary: { tooltip: "Continuar", icon: FastForward, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
           { label: "Resumir picking",  icon: ClipboardCheck },
           { label: "Liberar picking",  icon: LockUnlocked01 },
-          { label: "Ver",              icon: Eye },
+          { label: "Ver",              icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
     default: // Completada, Cancelada
-      return { menu: [{ label: "Ver", icon: Eye }] };
+      return { menu: [{ label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` }] };
   }
 }
 
@@ -237,7 +238,7 @@ function ActionsCell({ orden }: { orden: Orden }) {
   const [mounted,    setMounted]    = useState(false);
   const dotsRef       = useRef<HTMLButtonElement>(null);
   const primaryWrap   = useRef<HTMLDivElement>(null);
-  const { primary, menu } = getActions(orden.estado);
+  const { primary, menu } = getActions(orden.estado, orden.id);
   const Icon = primary?.icon;
 
   // Portal only works client-side
@@ -505,6 +506,7 @@ function OrdenesPageInner() {
   const fromRow      = filtered.length === 0 ? 0 : startIdx + 1;
   const toRow        = Math.min(startIdx + pageSize, filtered.length);
 
+
   return (
     <div className="p-6 min-w-0">
 
@@ -664,12 +666,13 @@ function OrdenesPageInner() {
           >
             <Download01 className="w-4 h-4" /> Exportar
           </button>
-          <button
+          <Link
+            href="/recepciones/crear?mode=sin-agenda"
             className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm text-gray-600 font-medium transition-colors"
             style={NW}
           >
             Recepción sin agenda
-          </button>
+          </Link>
           <Link
             href="/recepciones/crear"
             className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -809,8 +812,8 @@ function OrdenesPageInner() {
                   );
                   const LABELS: Record<ColumnKey, string> = {
                     creacion: "Creación", fechaAgendada: "F. Agendada",
-                    seller: "Seller", sucursal: "Sucursal", estado: "Estado",
-                    skus: "SKUs", uTotales: "Unidades", tags: "Tags de Resultado",
+                    seller: "Tienda", sucursal: "Sucursal", estado: "Estado",
+                    skus: "SKUs", uTotales: "U. Totales", tags: "Estado Productos",
                   };
                   return (
                     <th key={key} className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide" style={NW}>
