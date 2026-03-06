@@ -9,8 +9,7 @@ import {
   ChevronDown, ChevronUp, MoreHorizontal, Package,
 } from "lucide-react";
 import {
-  CheckCircle, AlertTriangle, XCircle,
-  Plus, InfoCircle, ClipboardCheck, LockUnlocked01,
+  Plus, ClipboardCheck, LockUnlocked01,
 } from "@untitled-ui/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -55,34 +54,15 @@ const MOCK_ORDENES: Record<string, OrdenData> = {
     sucursal: "Quilicura",
     fechaAgendada: "08/03/2026 16:30",
     products: [
-      {
-        id: "p1",
-        sku: "300034",
-        nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",
-        barcode: "8500942860946",
-        imagen: undefined,
-        esperadas: 100,
-        contadasSesion: 0,
-      },
-      {
-        id: "p2",
-        sku: "300052",
-        nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",
-        barcode: "8500942860625",
-        imagen: undefined,
-        esperadas: 150,
-        contadasSesion: 0,
-      },
+      { id: "p1", sku: "300034", nombre: "Extra Life Boost De Hidratación 4 Sachets Tropical Delight",  barcode: "8500942860946", esperadas: 100, contadasSesion: 0 },
+      { id: "p2", sku: "300052", nombre: "Boost De Hidratación Extra Life 20 Sachets Variety Pack",      barcode: "8500942860625", esperadas: 150, contadasSesion: 0 },
     ],
   },
 };
 
 function getFallbackOrden(id: string): OrdenData {
   return {
-    id,
-    seller: "Extra Life",
-    sucursal: "Quilicura",
-    fechaAgendada: "—",
+    id, seller: "Extra Life", sucursal: "Quilicura", fechaAgendada: "—",
     products: [
       { id: "p1", sku: "SKU-001", nombre: "Producto de muestra A", barcode: "1234567890001", esperadas: 100, contadasSesion: 0 },
       { id: "p2", sku: "SKU-002", nombre: "Producto de muestra B", barcode: "1234567890002", esperadas: 100, contadasSesion: 0 },
@@ -95,8 +75,8 @@ type ProductStatus = "completo" | "diferencia" | "exceso" | "pendiente";
 
 function getProductStatus(total: number, esperadas: number): ProductStatus {
   if (total === 0 && esperadas > 0) return "pendiente";
-  if (esperadas === 0 && total > 0) return "exceso";
-  if (total === esperadas)           return "completo";
+  if (esperadas === 0 && total > 0)  return "exceso";
+  if (total === esperadas)            return "completo";
   return "diferencia";
 }
 
@@ -107,24 +87,22 @@ function fmtDT(iso: string) {
   });
 }
 
-function sesionId(n: number) {
-  return `SES-${String(n).padStart(3, "0")}`;
-}
+function sesionId(n: number) { return `SES-${String(n).padStart(3, "0")}`; }
 
 // ─── Categorizar dropdown ─────────────────────────────────────────────────────
 const CATEGORIAS = ["Sin diferencias", "Con diferencias", "No pickeable", "Exceso"];
 
 function CategorizarBtn() {
-  const [open, setOpen]   = useState(false);
-  const [sel,  setSel]    = useState<string | null>(null);
-  const ref               = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [sel,  setSel]  = useState<string | null>(null);
+  const ref             = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function onClickOutside(e: MouseEvent) {
+    function oc(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("mousedown", oc);
+    return () => document.removeEventListener("mousedown", oc);
   }, []);
 
   return (
@@ -139,13 +117,9 @@ function CategorizarBtn() {
       {open && (
         <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
           {CATEGORIAS.map(c => (
-            <button
-              key={c}
-              onClick={() => { setSel(c); setOpen(false); }}
+            <button key={c} onClick={() => { setSel(c); setOpen(false); }}
               className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${sel === c ? "text-indigo-600 font-medium" : "text-gray-700"}`}
-            >
-              {c}
-            </button>
+            >{c}</button>
           ))}
         </div>
       )}
@@ -153,15 +127,89 @@ function CategorizarBtn() {
   );
 }
 
+// ─── Confirm Remove Modal ─────────────────────────────────────────────────────
+function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
+  nombre: string; onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5 text-red-500" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900">Eliminar producto</p>
+            <p className="text-xs text-gray-500">Esta acción no puede deshacerse.</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          ¿Confirmas que deseas eliminar{" "}
+          <span className="font-semibold text-gray-800">{nombre}</span>{" "}
+          de esta orden?
+        </p>
+        <div className="flex gap-3 pt-1">
+          <button onClick={onCancel}
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            Sí, eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Confirm Close Modal ──────────────────────────────────────────────────────
+function ConfirmCloseModal({ id, sesiones, totalContadas, onCancel, onConfirm }: {
+  id: string; sesiones: Sesion[]; totalContadas: number;
+  onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+            <ClipboardCheck className="w-5 h-5 text-gray-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-gray-900">Terminar recepción</p>
+            <p className="text-xs text-gray-500">Esta acción es definitiva y no puede deshacerse.</p>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          ¿Confirmas el cierre de la orden{" "}
+          <span className="font-mono font-semibold text-gray-800">{id}</span>?{" "}
+          Se registrarán{" "}
+          <span className="font-semibold">{totalContadas.toLocaleString("es-CL")} unidades</span>{" "}
+          en{" "}
+          <span className="font-semibold">{sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""}</span>.
+        </p>
+        <div className="flex gap-3 pt-1">
+          <button onClick={onCancel}
+            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors">
+            Sí, terminar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ProductCard ──────────────────────────────────────────────────────────────
-function ProductCard({
-  product, acumulado, sesionActiva, onChange, onRemove,
-}: {
+function ProductCard({ product, acumulado, sesionActiva, onChange, onRemove }: {
   product: ProductConteo;
   acumulado: number;
   sesionActiva: boolean;
   onChange: (id: string, val: number) => void;
-  onRemove:  (id: string) => void;
+  onRemove: (id: string) => void;
 }) {
   const total  = acumulado + product.contadasSesion;
   const status = getProductStatus(total, product.esperadas);
@@ -172,11 +220,14 @@ function ProductCard({
     status === "diferencia" ? "bg-amber-400" :
     status === "exceso"     ? "bg-red-400"   : "bg-gray-200";
 
+  // Display: editing active session counts; or accumulated total when idle
+  const displayVal = sesionActiva ? product.contadasSesion : total;
+
   return (
     <div className="p-4 border-b border-gray-100 last:border-0">
       <div className="flex items-start gap-4">
 
-        {/* Product image */}
+        {/* Image */}
         <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
           {product.imagen
             ? <img src={product.imagen} alt={product.nombre} className="w-full h-full object-cover" />
@@ -204,32 +255,35 @@ function ProductCard({
             <span className="font-semibold text-gray-500">C. DE BARRA:</span> {product.barcode}
           </p>
 
-          {/* Counter + esperadas + categorizar */}
+          {/* Counter row */}
           <div className="flex items-center gap-3 mt-3 flex-wrap">
-            {sesionActiva ? (
-              <>
-                <button
-                  onClick={() => onChange(product.id, Math.max(0, product.contadasSesion - 1))}
-                  className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold text-lg transition-colors"
-                >−</button>
-                <input
-                  type="number" min={0} value={product.contadasSesion}
-                  onChange={e => onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
-                  className="w-16 border border-gray-200 rounded-lg text-center text-sm font-semibold text-gray-800 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums"
-                />
-                <button
-                  onClick={() => onChange(product.id, product.contadasSesion + 1)}
-                  className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center hover:bg-gray-50 text-gray-600 font-bold text-lg transition-colors"
-                >+</button>
-              </>
-            ) : (
-              <span className="text-xs text-gray-400 italic">Sin sesión activa</span>
-            )}
+            <button
+              onClick={() => sesionActiva && onChange(product.id, Math.max(0, product.contadasSesion - 1))}
+              disabled={!sesionActiva}
+              className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold text-lg transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >−</button>
 
-            {/* esperadas */}
+            <input
+              type="number" min={0}
+              value={displayVal}
+              readOnly={!sesionActiva}
+              onChange={e => sesionActiva && onChange(product.id, Math.max(0, parseInt(e.target.value) || 0))}
+              className={`w-16 border border-gray-200 rounded-lg text-center text-sm font-semibold py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums transition-colors
+                ${sesionActiva ? "text-gray-800 bg-white" : "text-gray-600 bg-gray-50 cursor-default"}`}
+            />
+
+            <button
+              onClick={() => sesionActiva && onChange(product.id, product.contadasSesion + 1)}
+              disabled={!sesionActiva}
+              className="w-8 h-8 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 font-bold text-lg transition-colors hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >+</button>
+
+            {/* Esperadas */}
             <span className="flex items-center gap-1.5 text-sm text-gray-500 ml-1">
               <Package className="w-4 h-4 text-gray-400" />
-              <span className="tabular-nums font-medium text-gray-700">{total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}</span>
+              <span className="tabular-nums font-medium text-gray-700">
+                {total.toLocaleString("es-CL")}/{product.esperadas.toLocaleString("es-CL")}
+              </span>
               <span className="text-gray-400">esperadas</span>
             </span>
 
@@ -242,13 +296,10 @@ function ProductCard({
           {/* Progress bar */}
           {product.esperadas > 0 && (
             <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                style={{ width: `${pct}%` }}
-              />
+              <div className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                style={{ width: `${pct}%` }} />
             </div>
           )}
-
         </div>
       </div>
     </div>
@@ -262,38 +313,27 @@ function SesionRow({ sesion }: { sesion: Sesion }) {
 
   return (
     <div className="border-b border-gray-100 last:border-0">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-      >
-        {/* Session ID */}
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left">
         <span className="text-sm font-bold text-indigo-600 w-20 flex-shrink-0">{sesion.id}</span>
-
-        {/* Operator */}
         <span className="flex items-center gap-1.5 text-sm text-gray-600 flex-shrink-0">
           <User className="w-3.5 h-3.5 text-gray-400" />
           {sesion.operador}
         </span>
-
-        {/* Timestamps */}
         <span className="flex items-center gap-1.5 text-sm text-gray-400 flex-1 min-w-0 truncate">
           <Clock className="w-3.5 h-3.5 flex-shrink-0" />
           {fmtDT(sesion.inicio)}
           <span className="text-gray-300 mx-0.5">→</span>
           {fmtDT(sesion.fin)}
         </span>
-
-        {/* SKU count + units */}
         <span className="text-sm text-gray-500 flex-shrink-0">
           {sesion.items.length} SKU{sesion.items.length !== 1 ? "s" : ""}
         </span>
         <span className="text-sm font-bold text-gray-800 tabular-nums w-14 text-right flex-shrink-0">
           {totalUds.toLocaleString("es-CL")} uds
         </span>
-
-        {open
-          ? <ChevronUp   className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+        {open ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+               : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
       </button>
 
       {open && sesion.items.length > 0 && (
@@ -322,56 +362,6 @@ function SesionRow({ sesion }: { sesion: Sesion }) {
   );
 }
 
-// ─── Confirm-close modal ──────────────────────────────────────────────────────
-function ConfirmCloseModal({
-  id, sesiones, totalContadas, onCancel, onConfirm,
-}: {
-  id: string;
-  sesiones: Sesion[];
-  totalContadas: number;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <ClipboardCheck className="w-5 h-5 text-gray-600" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">Terminar recepción</p>
-            <p className="text-xs text-gray-500">Esta acción es definitiva y no puede deshacerse.</p>
-          </div>
-        </div>
-
-        <p className="text-sm text-gray-600 leading-relaxed">
-          ¿Confirmas el cierre de la orden{" "}
-          <span className="font-mono font-semibold text-gray-800">{id}</span>? Se registrarán{" "}
-          <span className="font-semibold">{totalContadas.toLocaleString("es-CL")} unidades</span>{" "}
-          en{" "}
-          <span className="font-semibold">{sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""}</span>.
-        </p>
-
-        <div className="flex gap-3 pt-1">
-          <button
-            onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors"
-          >
-            Sí, terminar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function ConteoORPage() {
   const params   = useParams();
@@ -379,17 +369,29 @@ export default function ConteoORPage() {
   const id       = decodeURIComponent(rawId);
   const baseData = MOCK_ORDENES[id] ?? getFallbackOrden(id);
 
-  // ── State ───────────────────────────────────────────────────────────────────
-  const [products,     setProducts]     = useState<ProductConteo[]>(baseData.products);
-  const [sesiones,     setSesiones]     = useState<Sesion[]>([]);
-  const [sesionActiva, setSesionActiva] = useState(false);
-  const [sesionInicio, setSesionInicio] = useState("");
-  const [scanner,      setScanner]      = useState("");
-  const [confirmClose, setConfirmClose] = useState(false);
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [products,      setProducts]      = useState<ProductConteo[]>(baseData.products);
+  const [sesiones,      setSesiones]      = useState<Sesion[]>([]);
+  const [sesionActiva,  setSesionActiva]  = useState(false);
+  const [sesionInicio,  setSesionInicio]  = useState("");
+  const [scanner,       setScanner]       = useState("");
+  const [confirmClose,  setConfirmClose]  = useState(false);
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);   // product id pending delete
+  const [showDotsMenu,  setShowDotsMenu]  = useState(false);
 
+  const dotsRef = useRef<HTMLDivElement>(null);
   const OPERADOR = "Fernando Roblero";
 
-  // ── Accumulated per product from CLOSED sessions ─────────────────────────
+  // Close dots menu on outside click
+  useEffect(() => {
+    function oc(e: MouseEvent) {
+      if (dotsRef.current && !dotsRef.current.contains(e.target as Node)) setShowDotsMenu(false);
+    }
+    document.addEventListener("mousedown", oc);
+    return () => document.removeEventListener("mousedown", oc);
+  }, []);
+
+  // ── Accumulated from closed sessions ─────────────────────────────────────
   const acumulado = useMemo<Record<string, number>>(() => {
     const map: Record<string, number> = {};
     for (const ses of sesiones)
@@ -405,25 +407,23 @@ export default function ConteoORPage() {
     return map;
   }, [products, acumulado]);
 
-  // ── Aggregate stats ─────────────────────────────────────────────────────
+  // ── Stats ─────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const totalEsperadas = products.reduce((s, p) => s + p.esperadas, 0);
     const totalAcum      = Object.values(acumulado).reduce((s, v) => s + v, 0);
     const totalSesionAct = products.reduce((s, p) => s + p.contadasSesion, 0);
     const totalContadas  = totalAcum + totalSesionAct;
     const pct            = totalEsperadas > 0 ? Math.round((totalContadas / totalEsperadas) * 100) : 0;
-
     const sinDiferencias = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "completo").length;
     const conDiferencias = products.filter(p => {
       const s = getProductStatus(totalPP[p.id] ?? 0, p.esperadas);
       return s === "diferencia" || s === "exceso";
     }).length;
     const pendientes = products.filter(p => getProductStatus(totalPP[p.id] ?? 0, p.esperadas) === "pendiente").length;
-
     return { totalEsperadas, totalContadas, totalSesionAct, pct, sinDiferencias, conDiferencias, pendientes };
   }, [products, acumulado, totalPP]);
 
-  // ── Session actions ───────────────────────────────────────────────────────
+  // ── Session actions ──────────────────────────────────────────────────────
   const iniciarSesion = () => {
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
     setSesionInicio(new Date().toISOString());
@@ -436,7 +436,6 @@ export default function ConteoORPage() {
     const items = products
       .filter(p => p.contadasSesion > 0)
       .map(p => ({ pid: p.id, sku: p.sku, nombre: p.nombre, cantidad: p.contadasSesion }));
-
     setSesiones(prev => [
       ...prev,
       { id: sesionId(prev.length + 1), operador: OPERADOR, inicio: sesionInicio, fin, items },
@@ -445,11 +444,20 @@ export default function ConteoORPage() {
     setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
   };
 
+  // Liberar: discard current session without saving
+  const liberarSesion = () => {
+    setSesionActiva(false);
+    setProducts(ps => ps.map(p => ({ ...p, contadasSesion: 0 })));
+    setShowDotsMenu(false);
+  };
+
   const updateContadas = (pid: string, val: number) =>
     setProducts(ps => ps.map(p => p.id === pid ? { ...p, contadasSesion: val } : p));
 
-  const removeProduct = (pid: string) =>
+  const removeProduct = (pid: string) => {
     setProducts(ps => ps.filter(p => p.id !== pid));
+    setPendingRemove(null);
+  };
 
   const handleScan = () => {
     const code = scanner.trim();
@@ -458,20 +466,36 @@ export default function ConteoORPage() {
     if (match) { updateContadas(match.id, match.contadasSesion + 1); setScanner(""); }
   };
 
-  const sesionNumActual = sesiones.length + 1;
-  const totalAcumUds   = sesiones.reduce((s, ses) => s + ses.items.reduce((a, i) => a + i.cantidad, 0), 0);
+  const sesionNumActual  = sesiones.length + 1;
+  const totalAcumUds     = sesiones.reduce((s, ses) => s + ses.items.reduce((a, i) => a + i.cantidad, 0), 0);
+  const pendingProduct   = products.find(p => p.id === pendingRemove);
+
+  // Terminar recepción button styles
+  const terminarDisabled = sesionActiva;
+  const terminarClass = terminarDisabled
+    ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
+    : sesiones.length > 0
+    ? "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+    : "bg-gray-100 border-gray-200 text-gray-700 hover:bg-gray-200";
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
 
+      {/* ── Modals ── */}
       {confirmClose && (
         <ConfirmCloseModal
-          id={id}
-          sesiones={sesiones}
-          totalContadas={stats.totalContadas}
+          id={id} sesiones={sesiones} totalContadas={stats.totalContadas}
           onCancel={() => setConfirmClose(false)}
           onConfirm={() => setConfirmClose(false)}
+        />
+      )}
+
+      {pendingProduct && (
+        <ConfirmRemoveModal
+          nombre={pendingProduct.nombre}
+          onCancel={() => setPendingRemove(null)}
+          onConfirm={() => removeProduct(pendingProduct.id)}
         />
       )}
 
@@ -499,15 +523,35 @@ export default function ConteoORPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            {/* Three-dot menu */}
-            <button className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
 
-            {/* Terminar recepción — gray, CA5 */}
+            {/* ── Three-dot menu ── */}
+            <div className="relative" ref={dotsRef}>
+              <button
+                onClick={() => setShowDotsMenu(o => !o)}
+                className="w-9 h-9 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+
+              {showDotsMenu && (
+                <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-48">
+                  <button
+                    onClick={liberarSesion}
+                    className="w-full flex items-center gap-2.5 px-3.5 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <LockUnlocked01 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    Liberar conteo
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ── Terminar recepción ── */}
             <button
-              onClick={() => setConfirmClose(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              onClick={() => !terminarDisabled && setConfirmClose(true)}
+              disabled={terminarDisabled}
+              title={terminarDisabled ? "Finaliza la sesión activa antes de terminar la recepción" : undefined}
+              className={`flex items-center gap-2 px-4 py-2 border text-sm font-medium rounded-lg transition-colors whitespace-nowrap ${terminarClass}`}
             >
               <ClipboardCheck className="w-4 h-4" />
               Terminar recepción
@@ -515,7 +559,7 @@ export default function ConteoORPage() {
           </div>
         </div>
 
-        {/* ── Summary cards — horizontal row ── */}
+        {/* ── Summary cards ── */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="grid grid-cols-4 divide-x divide-gray-100">
             {[
@@ -541,8 +585,6 @@ export default function ConteoORPage() {
               <span className="ml-1 text-gray-500 font-normal">({stats.pct}%)</span>
             </span>
           </div>
-
-          {/* Bar */}
           <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
@@ -552,8 +594,6 @@ export default function ConteoORPage() {
               style={{ width: `${stats.pct}%` }}
             />
           </div>
-
-          {/* Chips */}
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             {stats.conDiferencias > 0 && (
               <span className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
@@ -573,19 +613,24 @@ export default function ConteoORPage() {
           </div>
         </div>
 
-        {/* ── Active-session banner / start button ── */}
-        {sesionActiva ? (
+        {/* ── Active session banner ── */}
+        {sesionActiva && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse flex-shrink-0" />
             <div className="flex-1 min-w-0 text-sm">
-              <span className="font-semibold text-indigo-800">{sesionId(sesionNumActual)}</span>
-              <span className="text-indigo-400 ml-2 text-xs">Iniciada {fmtDT(sesionInicio)}</span>
+              <span className="font-bold text-indigo-700">{sesionId(sesionNumActual)}</span>
+              <span className="text-indigo-400 ml-2 text-xs">
+                Iniciada {fmtDT(sesionInicio)}
+              </span>
             </div>
-            <span className="text-xs font-semibold text-indigo-600 tabular-nums flex-shrink-0">
+            <span className="text-sm font-bold text-indigo-600 tabular-nums flex-shrink-0">
               {stats.totalSesionAct.toLocaleString("es-CL")} uds esta sesión
             </span>
           </div>
-        ) : (
+        )}
+
+        {/* ── Start session button (when no active session) ── */}
+        {!sesionActiva && (
           <div className="flex justify-center py-1">
             <button
               onClick={iniciarSesion}
@@ -597,10 +642,10 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Scanner (only during active session) ── */}
+        {/* ── Scanner (active session only) ── */}
         {sesionActiva && (
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <p className="text-base font-semibold text-gray-800 mb-3">
               Escanear código de barras
             </p>
             <div className="flex gap-2">
@@ -611,21 +656,22 @@ export default function ConteoORPage() {
                   value={scanner}
                   onChange={e => setScanner(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && handleScan()}
-                  placeholder="Ingresa o escanea SKU / código de barras"
+                  placeholder="Ingresa o escanea  SKU / Código de barras"
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder-gray-400"
                   autoFocus
                 />
               </div>
               <button
                 onClick={handleScan}
-                className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 Registrar
               </button>
             </div>
-            <p className="text-xs text-gray-400 mt-1.5">
-              Presiona <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono">Enter</kbd> o
-              haz clic en Registrar para contar una unidad.
+            <p className="text-xs text-gray-400 mt-2">
+              Presiona{" "}
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono border border-gray-200">Enter</kbd>{" "}
+              o haz clic en <span className="font-semibold text-gray-600">Registrar</span> para escanear una unidad.
             </p>
           </div>
         )}
@@ -650,12 +696,12 @@ export default function ConteoORPage() {
                 acumulado={acumulado[p.id] ?? 0}
                 sesionActiva={sesionActiva}
                 onChange={updateContadas}
-                onRemove={removeProduct}
+                onRemove={pid => setPendingRemove(pid)}
               />
             ))
           )}
 
-          {/* Añadir producto — inside the container */}
+          {/* Añadir producto */}
           <div className="border-t border-dashed border-gray-200">
             <button className="w-full flex items-center justify-center gap-2 py-3.5 text-sm text-gray-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-colors font-medium">
               <span className="w-5 h-5 rounded-full border-2 border-current flex items-center justify-center flex-shrink-0">
@@ -675,16 +721,15 @@ export default function ConteoORPage() {
                 {totalAcumUds.toLocaleString("es-CL")} uds acumuladas
               </span>
             </div>
-            {sesiones.map(ses => (
-              <SesionRow key={ses.id} sesion={ses} />
-            ))}
+            {sesiones.map(ses => <SesionRow key={ses.id} sesion={ses} />)}
           </div>
         )}
 
-        {/* ── Footer: Liberar + Finalizar sesión ── */}
+        {/* ── Footer: Liberar + Finalizar sesión (active session only) ── */}
         {sesionActiva && (
           <div className="flex items-center justify-between pt-2 pb-8">
             <button
+              onClick={liberarSesion}
               className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors"
             >
               <LockUnlocked01 className="w-4 h-4 text-gray-400" />
@@ -693,9 +738,9 @@ export default function ConteoORPage() {
 
             <button
               onClick={finalizarSesion}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm shadow-indigo-200"
+              className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors"
             >
-              <StopCircle className="w-4 h-4" />
+              <StopCircle className="w-4 h-4 text-gray-400" />
               Finalizar sesión
             </button>
           </div>
