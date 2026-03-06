@@ -85,25 +85,24 @@ const ORDENES: Orden[] = [
   // Recepcionado en bodega
   { id: "RO-BARRA-180", creacion: "16/02/2026", fechaAgendada: "20/02/2026 16:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Recepcionado en bodega", skus: 2, uTotales: "200" },
 
-  // En proceso de conteo
+  // En proceso de conteo (la OR permanece aquí durante TODO el conteo — 1 sesión o 20)
   { id: "RO-BARRA-184", creacion: "15/02/2026", fechaAgendada: "19/02/2026 10:00", seller: "Extra Life", sucursal: "Quilicura", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
   { id: "RO-BARRA-179", creacion: "14/02/2026", fechaAgendada: "18/02/2026 09:00", seller: "Gohard", sucursal: "La Reina", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
+  { id: "RO-BARRA-185", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 320, uTotales: "2.550" },
 
-  // Feature 2 — Parcialmente recepcionada: padre + sub-IDs
-  { id: "RO-BARRA-185",    creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Parcialmente recepcionada", skus: 320, uTotales: "2.550" },
-  { id: "RO-BARRA-185-P1", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "Completada", skus: 160, uTotales: "1.200", isSubId: true,
-    tags: makeTags({ sinDiferencias: 1150, conDiferencias: 50 }) },
-  { id: "RO-BARRA-185-P2", creacion: "13/02/2026", fechaAgendada: "17/02/2026 14:00", seller: "Gohard", sucursal: "Lo Barnechea", estado: "En proceso de conteo", skus: 160, uTotales: "1.350", isSubId: true },
+  // Pendiente de aprobación — recepción cerrada con diferencias, esperando supervisor
+  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Pendiente de aprobación", skus: 320, uTotales: "2.550",
+    tags: makeTags({ conDiferencias: 20 }) },
 
-  // Cancelada
-  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelada", skus: 320, uTotales: "2.550" },
+  // Cancelado
+  { id: "RO-BARRA-188", creacion: "12/02/2026", fechaAgendada: "16/02/2026 11:30", seller: "Extra Life", sucursal: "Santiago Centro", estado: "Cancelado", skus: 320, uTotales: "2.550" },
 
-  // Feature 4 — Completadas con tags de resultado
-  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completada", skus: 320, uTotales: "2.550",
+  // Completado con diferencias — aprobado por supervisor tras revisión
+  { id: "RO-BARRA-186", creacion: "11/02/2026", fechaAgendada: "15/02/2026 08:00", seller: "Extra Life", sucursal: "Quilicura", estado: "Completado con diferencias", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2510, conDiferencias: 20, noPickeables: 20 }) },
-  { id: "RO-BARRA-187", creacion: "10/02/2026", fechaAgendada: "14/02/2026 13:00", seller: "Le Vice", sucursal: "La Reina", estado: "Completada", skus: 320, uTotales: "2.550",
-    tags: makeTags({ conDiferencias: 20, pendiente: true }) },
-  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completada", skus: 320, uTotales: "2.550",
+
+  // Completado sin diferencias — conteo exacto, sin ajustes
+  { id: "RO-BARRA-189", creacion: "09/02/2026", fechaAgendada: "13/02/2026 15:30", seller: "Le Vice", sucursal: "Santiago Centro", estado: "Completado sin diferencias", skus: 320, uTotales: "2.550",
     tags: makeTags({ sinDiferencias: 2550 }) },
 ];
 
@@ -114,20 +113,22 @@ const TABS = [
   "Programado",
   "Recepcionado en bodega",
   "En proceso de conteo",
-  "Parcialmente recepcionada",
-  "Completada",
-  "Cancelada",
+  "Pendiente de aprobación",
+  "Completado sin diferencias",
+  "Completado con diferencias",
+  "Cancelado",
 ] as const;
 
 const TAB_STATUS: Record<string, Status | null> = {
-  "Todas":                      null,
-  "Creado":                     "Creado",
-  "Programado":                 "Programado",
-  "Recepcionado en bodega":     "Recepcionado en bodega",
-  "En proceso de conteo":       "En proceso de conteo",
-  "Parcialmente recepcionada":  "Parcialmente recepcionada",
-  "Completada":                 "Completada",
-  "Cancelada":                  "Cancelada",
+  "Todas":                        null,
+  "Creado":                       "Creado",
+  "Programado":                   "Programado",
+  "Recepcionado en bodega":       "Recepcionado en bodega",
+  "En proceso de conteo":         "En proceso de conteo",
+  "Pendiente de aprobación":      "Pendiente de aprobación",
+  "Completado sin diferencias":   "Completado sin diferencias",
+  "Completado con diferencias":   "Completado con diferencias",
+  "Cancelado":                    "Cancelado",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -211,21 +212,21 @@ function getActions(estado: Status, id: string): ActionConfig {
       };
     case "En proceso de conteo":
       return {
-        primary: { tooltip: "Resumir", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
+        primary: { tooltip: "Continuar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
           { label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
         ],
       };
-    case "Parcialmente recepcionada":
+    case "Pendiente de aprobación":
       return {
-        primary: { tooltip: "Continuar", icon: FastForward, href: `/recepciones/${encodeURIComponent(id)}` },
+        primary: { tooltip: "Revisar", icon: ClipboardCheck, href: `/recepciones/${encodeURIComponent(id)}` },
         menu: [
-          { label: "Resumir picking",  icon: ClipboardCheck },
-          { label: "Liberar picking",  icon: LockUnlocked01 },
-          { label: "Ver",              icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` },
+          { label: "Ver",                      icon: Eye,            href: `/recepciones/${encodeURIComponent(id)}` },
+          { label: "Aprobar con diferencias",  icon: CheckCircle },
+          { label: "Devolver a conteo",        icon: LockUnlocked01 },
         ],
       };
-    default: // Completada, Cancelada
+    default: // Completado sin diferencias, Completado con diferencias, Cancelado
       return { menu: [{ label: "Ver", icon: Eye, href: `/recepciones/${encodeURIComponent(id)}` }] };
   }
 }
@@ -399,21 +400,43 @@ function OrdenesPageInner() {
   const { colOrder, colVisible } = useColumnConfig();
   const activeColumns = colOrder.filter(k => colVisible.includes(k));
 
-  const [activeTab,   setActiveTab]   = useState<string>("Todas");
-  const [showToast,   setShowToast]   = useState(false);
-  const [toastMsg,    setToastMsg]    = useState({ title: "", subtitle: "" });
-  const [showInfo,    setShowInfo]    = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [search,      setSearch]      = useState("");
+  const [activeTab,         setActiveTab]         = useState<string>("Todas");
+  const [showToast,         setShowToast]         = useState(false);
+  const [toastMsg,          setToastMsg]          = useState({ title: "", subtitle: "" });
+  const [showInfo,          setShowInfo]          = useState(false);
+  const [showFilters,       setShowFilters]       = useState(false);
+  const [search,            setSearch]            = useState("");
+  const [orStatusOverrides, setOrStatusOverrides] = useState<Record<string, Status>>({});
+
+  // Read per-OR status overrides from localStorage (written by [id]/page.tsx on close)
+  useEffect(() => {
+    const overrides: Record<string, Status> = {};
+    for (const orden of ORDENES) {
+      try {
+        const stored = localStorage.getItem(`amplifica_or_${orden.id}`);
+        if (stored) {
+          const { estado } = JSON.parse(stored) as { estado: Status };
+          if (estado) overrides[orden.id] = estado;
+        }
+      } catch { /* ignore */ }
+    }
+    setOrStatusOverrides(overrides);
+  }, []);
 
   // ── Filter state ──
   const [filterSellers,    setFilterSellers]    = useState<Set<string>>(new Set());
   const [filterSucursales, setFilterSucursales] = useState<Set<string>>(new Set());
   const [filterTagTypes,   setFilterTagTypes]   = useState<Set<string>>(new Set());
 
+  // Apply localStorage overrides to the base data
+  const ordenesEffective = useMemo(() =>
+    ORDENES.map(o => orStatusOverrides[o.id] ? { ...o, estado: orStatusOverrides[o.id] } : o),
+    [orStatusOverrides]
+  );
+
   // ── Filter options (unique values from data) ──
-  const allSellers    = useMemo(() => [...new Set(ORDENES.map(o => o.seller))].sort(), []);
-  const allSucursales = useMemo(() => [...new Set(ORDENES.map(o => o.sucursal))].sort(), []);
+  const allSellers    = useMemo(() => [...new Set(ordenesEffective.map(o => o.seller))].sort(),    [ordenesEffective]);
+  const allSucursales = useMemo(() => [...new Set(ordenesEffective.map(o => o.sucursal))].sort(), [ordenesEffective]);
 
   // ── Active filter count (for badge) ──
   const activeFilterCount = filterSellers.size + filterSucursales.size + filterTagTypes.size;
@@ -457,7 +480,7 @@ function OrdenesPageInner() {
   };
 
   const filtered = useMemo(() => {
-    let rows = [...ORDENES];
+    let rows = [...ordenesEffective];
     const statusFilter = TAB_STATUS[activeTab];
     if (statusFilter) rows = rows.filter(o => o.estado === statusFilter);
 
@@ -493,7 +516,7 @@ function OrdenesPageInner() {
       });
     }
     return rows;
-  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes]);
+  }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, ordenesEffective]);
 
   // Reset to page 1 whenever filters/tabs/search change
   useEffect(() => { setPage(1); }, [activeTab, search, sortField, sortDir, filterSellers, filterSucursales, filterTagTypes, pageSize]);

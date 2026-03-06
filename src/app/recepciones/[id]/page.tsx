@@ -7,6 +7,7 @@ import {
   ChevronRight, Trash2, Scan, ImageOff,
   Clock, User, PlayCircle, StopCircle,
   ChevronDown, ChevronUp, MoreHorizontal, Package,
+  X, Check,
 } from "lucide-react";
 import {
   Plus, ClipboardCheck, LockUnlocked01,
@@ -164,37 +165,58 @@ function ConfirmRemoveModal({ nombre, onCancel, onConfirm }: {
 }
 
 // ─── Confirm Close Modal ──────────────────────────────────────────────────────
-function ConfirmCloseModal({ id, sesiones, totalContadas, onCancel, onConfirm }: {
-  id: string; sesiones: Sesion[]; totalContadas: number;
-  onCancel: () => void; onConfirm: () => void;
+type OrOutcome = "Completado sin diferencias" | "Completado con diferencias";
+
+function ConfirmCloseModal({ id, sesiones, totalContadas, totalEsperadas, onCancel, onConfirm }: {
+  id: string; sesiones: Sesion[]; totalContadas: number; totalEsperadas: number;
+  onCancel: () => void; onConfirm: (outcome: OrOutcome) => void;
 }) {
+  const diff    = totalEsperadas - totalContadas;
+  const outcome: OrOutcome = diff === 0 ? "Completado sin diferencias" : "Completado con diferencias";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <ClipboardCheck className="w-5 h-5 text-gray-600" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-900">Terminar recepción</p>
-            <p className="text-xs text-gray-500">Esta acción es definitiva y no puede deshacerse.</p>
-          </div>
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+
+        {/* Close button */}
+        <div className="flex justify-end mb-2">
+          <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <p className="text-sm text-gray-600 leading-relaxed">
+
+        {/* Icon */}
+        <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
+          <ClipboardCheck className="w-7 h-7 text-green-600" />
+        </div>
+
+        {/* Title + subtitle */}
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Terminar recepción</h3>
+        <p className="text-sm text-gray-500 mb-5">Esta acción es definitiva y no puede deshacerse</p>
+
+        {/* Body */}
+        <p className="text-sm text-gray-700 mb-7 leading-relaxed">
           ¿Confirmas el cierre de la orden{" "}
-          <span className="font-mono font-semibold text-gray-800">{id}</span>?{" "}
+          <span className="font-bold text-gray-900">{id}</span>?{" "}
           Se registrarán{" "}
-          <span className="font-semibold">{totalContadas.toLocaleString("es-CL")} unidades</span>{" "}
+          <span className="font-bold text-gray-900">
+            {totalContadas.toLocaleString("es-CL")} Unidades
+          </span>{" "}
           en{" "}
-          <span className="font-semibold">{sesiones.length} sesión{sesiones.length !== 1 ? "es" : ""}</span>.
+          <span className="font-bold text-gray-900">
+            {sesiones.length} Sesión{sesiones.length !== 1 ? "es" : ""}
+          </span>
         </p>
-        <div className="flex gap-3 pt-1">
+
+        {/* Buttons */}
+        <div className="flex gap-3">
           <button onClick={onCancel}
             className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 font-medium transition-colors">
             Cancelar
           </button>
-          <button onClick={onConfirm}
-            className="flex-1 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold rounded-lg transition-colors">
+          <button onClick={() => onConfirm(outcome)}
+            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+            <Check className="w-4 h-4" />
             Sí, terminar
           </button>
         </div>
@@ -378,6 +400,20 @@ export default function ConteoORPage() {
   const [confirmClose,  setConfirmClose]  = useState(false);
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);   // product id pending delete
   const [showDotsMenu,  setShowDotsMenu]  = useState(false);
+  const [orEstado,      setOrEstado]      = useState<OrOutcome | null>(null); // null = en proceso
+
+  // Restore closed state from localStorage (e.g. after back-navigation)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`amplifica_or_${id}`);
+      if (stored) {
+        const { estado } = JSON.parse(stored) as { estado: OrOutcome };
+        if (estado === "Completado sin diferencias" || estado === "Completado con diferencias") {
+          setOrEstado(estado);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [id]);
 
   const dotsRef = useRef<HTMLDivElement>(null);
   const OPERADOR = "Fernando Roblero";
@@ -471,7 +507,8 @@ export default function ConteoORPage() {
   const pendingProduct   = products.find(p => p.id === pendingRemove);
 
   // Terminar recepción button styles
-  const terminarDisabled = sesionActiva;
+  const orCerrada        = orEstado !== null;
+  const terminarDisabled = sesionActiva || orCerrada;
   const terminarClass = terminarDisabled
     ? "bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed"
     : sesiones.length > 0
@@ -485,9 +522,15 @@ export default function ConteoORPage() {
       {/* ── Modals ── */}
       {confirmClose && (
         <ConfirmCloseModal
-          id={id} sesiones={sesiones} totalContadas={stats.totalContadas}
+          id={id} sesiones={sesiones}
+          totalContadas={stats.totalContadas}
+          totalEsperadas={stats.totalEsperadas}
           onCancel={() => setConfirmClose(false)}
-          onConfirm={() => setConfirmClose(false)}
+          onConfirm={(outcome) => {
+            setOrEstado(outcome);
+            try { localStorage.setItem(`amplifica_or_${id}`, JSON.stringify({ estado: outcome })); } catch { /* ignore */ }
+            setConfirmClose(false);
+          }}
         />
       )}
 
@@ -613,6 +656,35 @@ export default function ConteoORPage() {
           </div>
         </div>
 
+        {/* ── OR closed result banner ── */}
+        {orCerrada && (() => {
+          const sinDif = orEstado === "Completado sin diferencias";
+          return (
+            <div className={`rounded-xl px-4 py-4 flex items-center gap-4 border ${
+              sinDif ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
+            }`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-lg font-bold ${
+                sinDif ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-600"
+              }`}>✓</div>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-bold ${sinDif ? "text-green-700" : "text-amber-700"}`}>
+                  Recepción cerrada
+                </p>
+                <p className={`text-xs mt-0.5 ${sinDif ? "text-green-600" : "text-amber-600"}`}>
+                  {sinDif
+                    ? "Todas las unidades fueron contadas sin diferencias."
+                    : "Se registraron diferencias entre lo declarado y lo contado."}
+                </p>
+              </div>
+              <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${
+                sinDif ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+              }`}>
+                {orEstado}
+              </span>
+            </div>
+          );
+        })()}
+
         {/* ── Active session banner ── */}
         {sesionActiva && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -629,8 +701,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Start session button (when no active session) ── */}
-        {!sesionActiva && (
+        {/* ── Start session button (when no active session and OR still open) ── */}
+        {!sesionActiva && !orCerrada && (
           <div className="flex justify-center py-1">
             <button
               onClick={iniciarSesion}
@@ -725,8 +797,8 @@ export default function ConteoORPage() {
           </div>
         )}
 
-        {/* ── Footer: Liberar + Finalizar sesión (active session only) ── */}
-        {sesionActiva && (
+        {/* ── Footer: Liberar + Finalizar sesión (active session only, OR still open) ── */}
+        {sesionActiva && !orCerrada && (
           <div className="flex items-center justify-between pt-2 pb-8">
             <button
               onClick={liberarSesion}
